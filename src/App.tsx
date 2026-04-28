@@ -1,0 +1,149 @@
+import { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import RoleSelection from './pages/RoleSelection';
+import Login from './pages/Login';
+import DashboardLayout from './components/shared/Sidebar';
+import AdminDashboard from './components/admin/AdminDashboard';
+import BranchForm from './components/admin/BranchForm';
+import ProductManager from './components/admin/ProductManager';
+import StockRequests from './components/admin/StockRequests';
+import ActivityLogs from './components/admin/ActivityLogs';
+import IncomeReports from './components/admin/IncomeReports';
+import Notifications from './components/admin/Notifications';
+import AllBranches from './components/admin/AllBranches';
+import BranchActivityDetail from './components/admin/BranchActivityDetail';
+import POSInterface from './components/branch/POSInterface';
+import StockRequest from './components/branch/StockRequest';
+import SalesHistory from './components/branch/SalesHistory';
+import BranchNotifications from './components/branch/BranchNotifications';
+import {
+  LayoutDashboard, Package, ClipboardList, Activity, TrendingUp, Bell,
+  ShoppingCart, Send, History, Users
+} from 'lucide-react';
+
+type AppView = 'role-select' | 'login' | 'dashboard';
+type AdminTab = 'dashboard' | 'all-branches' | 'products' | 'stock-requests' | 'activity-logs' | 'income' | 'notifications';
+type BranchTab = 'pos' | 'stock-request' | 'sales-history' | 'notifications';
+
+interface Profile {
+  id: string;
+  username: string;
+  role: string;
+  branch_name: string | null;
+  location: string | null;
+}
+
+function AppContent() {
+  const { user, profile, loading } = useAuth();
+  const [view, setView] = useState<AppView>('role-select');
+  const [loginRole, setLoginRole] = useState<'admin' | 'branch'>('admin');
+  const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
+  const [branchTab, setBranchTab] = useState<BranchTab>('pos');
+  const [viewingBranch, setViewingBranch] = useState<Profile | null>(null);
+
+  // If user is logged in, show dashboard
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (user && profile) {
+    if (profile.role === 'admin') {
+      const adminNavItems = [
+        { key: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { key: 'all-branches', label: 'All Branches', icon: <Users className="w-4 h-4" /> },
+        { key: 'products', label: 'Products', icon: <Package className="w-4 h-4" /> },
+        { key: 'stock-requests', label: 'Stock Requests', icon: <ClipboardList className="w-4 h-4" /> },
+        { key: 'activity-logs', label: 'Activity Logs', icon: <Activity className="w-4 h-4" /> },
+        { key: 'income', label: 'Income Reports', icon: <TrendingUp className="w-4 h-4" /> },
+        { key: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+      ];
+
+      const renderAdminContent = () => {
+        switch (adminTab) {
+          case 'dashboard':
+            return viewingBranch ? (
+              <div>
+                <button
+                  onClick={() => setViewingBranch(null)}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 mb-4 font-medium"
+                >
+                  &larr; Back to Dashboard
+                </button>
+                <ActivityLogs branchFilter={viewingBranch} />
+              </div>
+            ) : (
+              <AdminDashboard onViewBranch={(b) => { setViewingBranch(b); setAdminTab('activity-logs'); }} />
+            );
+          case 'all-branches':
+            return viewingBranch ? (
+              <BranchActivityDetail branch={viewingBranch} onBack={() => setViewingBranch(null)} />
+            ) : (
+              <AllBranches onViewActivity={(b) => setViewingBranch(b)} />
+            );
+          case 'products':
+            return <ProductManager />;
+          case 'stock-requests':
+            return <StockRequests />;
+          case 'activity-logs':
+            return <ActivityLogs />;
+          case 'income':
+            return <IncomeReports />;
+          case 'notifications':
+            return <Notifications />;
+        }
+      };
+
+      return (
+        <DashboardLayout navItems={adminNavItems} activeKey={adminTab} onNavChange={(k) => { setAdminTab(k as AdminTab); setViewingBranch(null); }}>
+          {adminTab === 'dashboard' && !viewingBranch && (
+            <div className="mb-6">
+              <BranchForm onCreated={() => {}} />
+            </div>
+          )}
+          {renderAdminContent()}
+        </DashboardLayout>
+      );
+    } else {
+      const branchNavItems = [
+        { key: 'pos', label: 'Point of Sale', icon: <ShoppingCart className="w-4 h-4" /> },
+        { key: 'stock-request', label: 'Request Stock', icon: <Send className="w-4 h-4" /> },
+        { key: 'sales-history', label: 'Sales History', icon: <History className="w-4 h-4" /> },
+        { key: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+      ];
+
+      const renderBranchContent = () => {
+        switch (branchTab) {
+          case 'pos': return <POSInterface />;
+          case 'stock-request': return <StockRequest />;
+          case 'sales-history': return <SalesHistory />;
+          case 'notifications': return <BranchNotifications />;
+        }
+      };
+
+      return (
+        <DashboardLayout navItems={branchNavItems} activeKey={branchTab} onNavChange={(k) => setBranchTab(k as BranchTab)}>
+          {renderBranchContent()}
+        </DashboardLayout>
+      );
+    }
+  }
+
+  // Not logged in
+  if (view === 'login') {
+    return <Login role={loginRole} onBack={() => setView('role-select')} />;
+  }
+
+  return <RoleSelection onSelectRole={(role) => { setLoginRole(role); setView('login'); }} />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
