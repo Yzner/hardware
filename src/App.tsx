@@ -34,6 +34,7 @@ import {
   History,
   Briefcase,
   ShoppingCart,
+  Send,
 } from 'lucide-react';
 
 type AppView = 'role-select' | 'login' | 'dashboard';
