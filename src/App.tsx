@@ -16,13 +16,43 @@ import POSInterface from './components/branch/POSInterface';
 import StockRequest from './components/branch/StockRequest';
 import SalesHistory from './components/branch/SalesHistory';
 import BranchNotifications from './components/branch/BranchNotifications';
+import EmpDashboard from './components/admin/EmpDashboard';
+import Attendance from './components/admin/Attendance';
+import Debts from './components/admin/Debts';
+import Employees from './components/admin/Employees';
+import Payroll from './components/admin/Payroll';
+import Reports from './components/admin/Reports';
+import Layout from './contexts/Layout';
 import {
-  LayoutDashboard, Package, ClipboardList, Activity, TrendingUp, Bell,
-  ShoppingCart, Send, History, Users
+  LayoutDashboard,
+  Users,
+  Package,
+  ClipboardList,
+  Activity,
+  Bell,
+  TrendingUp,
+  FileText,
+  Banknote,
+  FileBarChart,
+  History,
+  Briefcase,
+  ShoppingCart,
 } from 'lucide-react';
 
 type AppView = 'role-select' | 'login' | 'dashboard';
-type AdminTab = 'dashboard' | 'all-branches' | 'products' | 'stock-requests' | 'activity-logs' | 'income' | 'notifications';
+type AdminTab = 
+'dashboard' | 
+'all-branches' | 
+'products' | 
+'stock-requests' | 
+'activity-logs' | 
+'income' | 
+'Notifications' | 
+'Attendance' | 
+'Debts' |
+'Payroll' | 
+'Reports' |
+'Employees';
 type BranchTab = 'pos' | 'stock-request' | 'sales-history' | 'notifications';
 
 interface Profile {
@@ -53,13 +83,66 @@ function AppContent() {
   if (user && profile) {
     if (profile.role === 'admin') {
       const adminNavItems = [
-        { key: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { key: 'all-branches', label: 'All Branches', icon: <Users className="w-4 h-4" /> },
-        { key: 'products', label: 'Products', icon: <Package className="w-4 h-4" /> },
-        { key: 'stock-requests', label: 'Stock Requests', icon: <ClipboardList className="w-4 h-4" /> },
-        { key: 'activity-logs', label: 'Activity Logs', icon: <Activity className="w-4 h-4" /> },
-        { key: 'income', label: 'Income Reports', icon: <TrendingUp className="w-4 h-4" /> },
-        { key: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+        {
+          key: 'dashboard',
+          label: 'Dashboard',
+          icon: <LayoutDashboard className="w-4 h-4" />,
+        },
+        {
+          key: 'all-branches',
+          label: 'All Branches',
+          icon: <Users className="w-4 h-4" />,
+        },
+        {
+          key: 'Employees',
+          label: 'Employees',
+          icon: <Briefcase className="w-4 h-4" />,
+        },
+        {
+          key: 'products',
+          label: 'Products',
+          icon: <Package className="w-4 h-4" />,
+        },
+        {
+          key: 'stock-requests',
+          label: 'Stock Requests',
+          icon: <ShoppingCart className="w-4 h-4" />,
+        },
+        {
+          key: 'activity-logs',
+          label: 'Activity Logs',
+          icon: <History className="w-4 h-4" />,
+        },
+        {
+          key: 'Attendance',
+          label: 'Attendance',
+          icon: <ClipboardList className="w-4 h-4" />,
+        },
+        {
+          key: 'Debts',
+          label: 'Employee Debts',
+          icon: <Banknote className="w-4 h-4" />,
+        },
+        {
+          key: 'Payroll',
+          label: 'Payroll',
+          icon: <FileText className="w-4 h-4" />,
+        },
+        {
+          key: 'Reports',
+          label: 'Employee Reports',
+          icon: <FileBarChart className="w-4 h-4" />,
+        },
+        {
+          key: 'income',
+          label: 'Income Reports',
+          icon: <TrendingUp className="w-4 h-4" />,
+        },
+        {
+          key: 'notifications',
+          label: 'Notifications',
+          icon: <Bell className="w-4 h-4" />,
+        },
       ];
 
       const renderAdminContent = () => {
@@ -94,10 +177,21 @@ function AppContent() {
             return <IncomeReports />;
           case 'notifications':
             return <Notifications />;
+          case 'Attendance':
+            return <Attendance />;
+          case 'Debts':
+            return <Debts />;
+          case 'Employees':
+            return <Employees />;
+          case 'Payroll':
+            return <Payroll />;
+          case 'Reports':
+            return <Reports />;
         }
       };
 
       return (
+
         <DashboardLayout navItems={adminNavItems} activeKey={adminTab} onNavChange={(k) => { setAdminTab(k as AdminTab); setViewingBranch(null); }}>
           {adminTab === 'dashboard' && !viewingBranch && (
             <div className="mb-6">
