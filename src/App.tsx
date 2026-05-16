@@ -16,19 +16,16 @@ import POSInterface from './components/branch/POSInterface';
 import StockRequest from './components/branch/StockRequest';
 import SalesHistory from './components/branch/SalesHistory';
 import BranchNotifications from './components/branch/BranchNotifications';
-import EmpDashboard from './components/admin/EmpDashboard';
 import Attendance from './components/admin/Attendance';
 import Debts from './components/admin/Debts';
 import Employees from './components/admin/Employees';
 import Payroll from './components/admin/Payroll';
 import Reports from './components/admin/Reports';
-import Layout from './contexts/Layout';
 import {
   LayoutDashboard,
   Users,
   Package,
   ClipboardList,
-  Activity,
   Bell,
   TrendingUp,
   FileText,
@@ -139,7 +136,7 @@ function AppContent() {
           icon: <TrendingUp className="w-4 h-4" />,
         },
         {
-          key: 'notifications',
+          key: 'Notifications',
           label: 'Notifications',
           icon: <Bell className="w-4 h-4" />,
         },
@@ -175,7 +172,7 @@ function AppContent() {
             return <ActivityLogs />;
           case 'income':
             return <IncomeReports />;
-          case 'notifications':
+          case 'Notifications':
             return <Notifications />;
           case 'Attendance':
             return <Attendance />;
