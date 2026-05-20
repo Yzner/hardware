@@ -21,6 +21,9 @@ import Debts from './components/admin/Debts';
 import Employees from './components/admin/Employees';
 import Payroll from './components/admin/Payroll';
 import Reports from './components/admin/Reports';
+import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
+
+
 import {
   LayoutDashboard,
   Users,
@@ -63,12 +66,19 @@ interface Profile {
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
+
+  if (window.location.pathname === '/attendance/check-in') {
+    return <AttendanceCheckIn />;
+  }
+
   const [view, setView] = useState<AppView>('role-select');
   const [loginRole, setLoginRole] = useState<'admin' | 'branch'>('admin');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [branchTab, setBranchTab] = useState<BranchTab>('pos');
   const [viewingBranch, setViewingBranch] = useState<Profile | null>(null);
-
+  if (window.location.pathname === '/attendance/check-in') {
+    return <AttendanceCheckIn />;
+  }
   // If user is logged in, show dashboard
   if (loading) {
     return (

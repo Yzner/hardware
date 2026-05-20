@@ -101,11 +101,61 @@ export default function Payroll() {
   };
 
   const markAsPaid = async (id: string) => {
-    await supabase
-      .from('payroll')
-      .update({ status: 'paid', updated_at: new Date().toISOString() })
-      .eq('id', id);
-    fetchData();
+    try {
+      setSaving(true);
+
+      // Get payroll record to know which employee this payroll belongs to
+      const { data: payrollRecord, error: payrollFetchError } = await supabase
+        .from('payroll')
+        .select('id, employee_id')
+        .eq('id', id)
+        .single();
+
+      if (payrollFetchError) {
+        throw payrollFetchError;
+      }
+
+      if (!payrollRecord) {
+        throw new Error('Payroll record not found.');
+      }
+
+      // 1. Update payroll status to paid
+      const { error: payrollUpdateError } = await supabase
+        .from('payroll')
+        .update({
+          status: 'paid',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (payrollUpdateError) {
+        throw payrollUpdateError;
+      }
+
+      // 2. Delete fully paid debts for this employee
+      // A debt is considered fully paid when remaining_balance <= 0
+      const { error: deleteDebtError } = await supabase
+        .from('debts')
+        .delete()
+        .eq('employee_id', payrollRecord.employee_id)
+        .lte('remaining_balance', 0);
+
+      if (deleteDebtError) {
+        throw deleteDebtError;
+      }
+
+      // Refresh data
+      await fetchData();
+    } catch (error) {
+      console.error('Error marking payroll as paid:', error);
+      alert(
+        `Failed to mark payroll as paid: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filtered = payrolls.filter(

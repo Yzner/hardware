@@ -37,13 +37,6 @@ export default function Attendance() {
     fetchData();
   }, [fetchData]);
 
-  // Check if opened via QR scan (URL has ?scan=true)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('scan') === 'true') {
-      setShowScanner(true);
-    }
-  }, []);
 
   const startCamera = async () => {
     try {
@@ -135,14 +128,10 @@ export default function Attendance() {
     setFaceVerified(false);
     setCameraActive(false);
     stopCamera();
-    // Clean URL params if opened via QR
-    if (window.location.search) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
   };
 
-  // QR code value is a URL that points back to this page with ?scan=true
-  const attendanceUrl = `${window.location.origin}/attendance?scan=true`;
+  // QR code value points to the employee check-in page
+  const attendanceUrl = `${window.location.origin}/attendance/check-in`;
   const companyQrData = attendanceUrl;
 
   if (loading) {
@@ -170,10 +159,10 @@ export default function Attendance() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* QR Code Card - clickable to open attendance form */}
-        <div
+        {/* QR Code Card - links to check-in page */}
+        <a
+          href="/attendance/check-in"
           className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all group"
-          onClick={() => setShowScanner(true)}
         >
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Company QR Code</h2>
           <div className="p-4 bg-white rounded-xl border-2 border-slate-200 shadow-sm group-hover:border-emerald-300 transition-colors">
@@ -181,10 +170,10 @@ export default function Attendance() {
           </div>
           <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600 font-medium">
             <Smartphone size={16} />
-            <span>Scan or click to mark attendance</span>
+            <span>Scan to mark attendance</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Opens attendance form on mobile</p>
-        </div>
+          <p className="text-xs text-slate-400 mt-1">Employee check-in page</p>
+        </a>
 
         {/* Today's Stats */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 lg:col-span-2">
