@@ -205,8 +205,8 @@ export default function Reports() {
                         {rec.employee?.full_name || 'Unknown'}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">{formatDate(rec.date)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{formatTime(record.time_in ?? null)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{formatTime(record.time_out ?? null)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{formatTime(rec.time_in)}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{formatTime(rec.time_out)}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{rec.total_hours || '--'}</td>
                     </tr>
                   ))}
