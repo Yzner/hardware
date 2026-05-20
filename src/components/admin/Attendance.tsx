@@ -18,7 +18,6 @@ export default function Attendance() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
-  
 
   const fetchData = useCallback(async () => {
     const [empRes, attRes] = await Promise.all([
@@ -132,7 +131,6 @@ export default function Attendance() {
   };
 
   // QR code value points to the employee check-in page
-  const attendanceUrl = `${window.location.origin}/attendance/check-in`;
   const companyQrData = `${window.location.origin}/attendance/check-in`;
 
   if (loading) {
