@@ -18,6 +18,7 @@ export default function Attendance() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+  
 
   const fetchData = useCallback(async () => {
     const [empRes, attRes] = await Promise.all([
@@ -132,7 +133,7 @@ export default function Attendance() {
 
   // QR code value points to the employee check-in page
   const attendanceUrl = `${window.location.origin}/attendance/check-in`;
-  const companyQrData = attendanceUrl;
+  const companyQrData = `${window.location.origin}/attendance/check-in`;
 
   if (loading) {
     return (
@@ -162,17 +163,36 @@ export default function Attendance() {
         {/* QR Code Card - links to check-in page */}
         <a
           href="/attendance/check-in"
+          target="_blank"
+          rel="noopener noreferrer"
           className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all group"
         >
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Company QR Code</h2>
+
           <div className="p-4 bg-white rounded-xl border-2 border-slate-200 shadow-sm group-hover:border-emerald-300 transition-colors">
-            <QRCodeSVG value={companyQrData} size={180} />
+            <QRCodeSVG
+              value={companyQrData}
+              size={220}
+              level="H"
+              includeMargin={true}
+              bgColor="#ffffff"
+              fgColor="#000000"
+            />
           </div>
-          <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600 font-medium">
+
+          <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 font-medium">
             <Smartphone size={16} />
             <span>Scan to mark attendance</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Employee check-in page</p>
+
+          <p className="text-xs text-slate-400 mt-1 text-center">
+            Employees can scan this QR code using their phone camera
+          </p>
+
+          {/* Show the actual URL for debugging */}
+          <p className="mt-3 text-[10px] text-slate-400 break-all text-center max-w-full">
+            {companyQrData}
+          </p>
         </a>
 
         {/* Today's Stats */}
