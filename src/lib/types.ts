@@ -7,22 +7,28 @@ export interface Employee {
   age: number;
   position: string;
   salary_rate: number;
-  profile_picture_url: string;
-  face_data: string;
+
+  // NEW FIELD FOR FINGERPRINT
+  fingerprint_registered: boolean;
+
+  // OPTIONAL OLD FIELD (keep temporarily if some code still references it)
+  face_data?: string | null;
+
   is_active: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string | null;
 }
 
 export interface Attendance {
   id: string;
   employee_id: string;
   date: string;
-  time_in: string | null;
-  time_out: string | null;
-  total_hours: number;
+  time_in: string;
+  time_out?: string | null;
+  total_hours?: number | null;
   status: string;
   created_at: string;
+
   employee?: Employee;
 }
 
