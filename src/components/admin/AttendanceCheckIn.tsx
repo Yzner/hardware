@@ -14,7 +14,7 @@ export default function AttendanceCheckIn() {
   const [successMessage, setSuccessMessage] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+  const [dateFilter] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchEmployees = useCallback(async () => {
     const { data } = await supabase
