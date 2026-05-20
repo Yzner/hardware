@@ -527,6 +527,7 @@ function Employees() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [selected, setSelected] = useState<Employee | null>(null);
   const [editing, setEditing] = useState(false);
 

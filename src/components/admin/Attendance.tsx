@@ -791,11 +791,11 @@ export default function Attendance() {
                   </td>
 
                   <td className="px-6 py-4 text-sm">
-                    {formatTime(rec.time_in)}
+                    {formatTime(rec.time_in ?? null)}
                   </td>
 
                   <td className="px-6 py-4 text-sm">
-                    {formatTime(rec.time_out)}
+                    {formatTime(rec.time_out ?? null)}
                   </td>
 
                   <td className="px-6 py-4 text-sm">

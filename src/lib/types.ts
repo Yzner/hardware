@@ -11,8 +11,6 @@ export interface Employee {
   // NEW FIELD FOR FINGERPRINT
   fingerprint_registered: boolean;
 
-  // OPTIONAL OLD FIELD (keep temporarily if some code still references it)
-  face_data?: string | null;
 
   is_active: boolean;
   created_at: string;
