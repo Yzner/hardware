@@ -22,7 +22,7 @@ import Employees from './components/admin/Employees';
 import Payroll from './components/admin/Payroll';
 import Reports from './components/admin/Reports';
 import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
-
+import SendItem from './components/branch/SendItem';
 
 import {
   LayoutDashboard,
@@ -54,7 +54,12 @@ type AdminTab =
 'Payroll' | 
 'Reports' |
 'Employees';
-type BranchTab = 'pos' | 'stock-request' | 'sales-history' | 'notifications';
+type BranchTab =
+  | 'pos'
+  | 'stock-request'
+  | 'send-item'
+  | 'sales-history'
+  | 'notifications';
 
 interface Profile {
   id: string;
@@ -215,6 +220,11 @@ function AppContent() {
         { key: 'stock-request', label: 'Request Stock', icon: <Send className="w-4 h-4" /> },
         { key: 'sales-history', label: 'Sales History', icon: <History className="w-4 h-4" /> },
         { key: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
+        {
+          key: 'send-item',
+          label: 'Send Item',
+          icon: <Send className="w-4 h-4" />,
+        },
       ];
 
       const renderBranchContent = () => {
@@ -223,6 +233,8 @@ function AppContent() {
           case 'stock-request': return <StockRequest />;
           case 'sales-history': return <SalesHistory />;
           case 'notifications': return <BranchNotifications />;
+          case 'send-item':
+            return <SendItem />;
         }
       };
 

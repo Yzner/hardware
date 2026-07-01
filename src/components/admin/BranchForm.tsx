@@ -44,20 +44,28 @@ export default function BranchForm({ onCreated }: { onCreated: () => void }) {
   //     setLoading(false);
   //   }
   // };
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
+
   setError('');
   setLoading(true);
 
   try {
-    const { data: { session } } = await supabase.auth.getSession();
 
-    const res = await fetch(
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error('No active session found');
+    }
+
+    const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-branch`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -70,27 +78,39 @@ export default function BranchForm({ onCreated }: { onCreated: () => void }) {
       }
     );
 
-    const data = await res.json();
+    const data = await response.json();
 
-    // 🔥 IMPORTANT: show FULL error from backend
-    if (!res.ok) {
-      console.log('EDGE FUNCTION ERROR:', data);
-      throw new Error(data.message || data.error || JSON.stringify(data));
+    console.log('SERVER RESPONSE:', data);
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to create branch');
     }
 
+    // RESET
     setEmail('');
     setPassword('');
     setUsername('');
     setBranchName('');
     setLocation('');
+
     setOpen(false);
+
     onCreated();
 
+    alert('Branch account created successfully');
+
   } catch (err: any) {
+
+    console.error(err);
+
     setError(err.message);
+
   } finally {
+
     setLoading(false);
+
   }
+
 };
 
   return (

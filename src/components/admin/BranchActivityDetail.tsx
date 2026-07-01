@@ -30,41 +30,78 @@ interface BranchProduct {
   products: { name: string; price: number; unit: string }[] | { name: string; price: number; unit: string };
 }
 
+type Period = 'today' | 'weekly' | 'monthly';
+
+const toISODate = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 export default function BranchActivityDetail({ branch, onBack }: { branch: Profile; onBack: () => void }) {
-  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+  const [period, setPeriod] = useState<Period>('today');
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<BranchProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSale, setExpandedSale] = useState<string | null>(null);
+  const [rangeLabel, setRangeLabel] = useState('');
+
+  const today = new Date();
+  const [weekStart, setWeekStart] = useState(toISODate(today));
+  const [monthValue, setMonthValue] = useState(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`);
 
   useEffect(() => {
     loadData();
-  }, [period]);
+  }, [period, weekStart, monthValue]);
 
   const loadData = async () => {
     setLoading(true);
 
-    const now = new Date();
-    let startDate: Date;
+    let start: Date;
+    let end: Date | null = null;
+    let label = '';
+
     switch (period) {
-      case 'today':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      case 'today': {
+        const now = new Date();
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        label = `Today (${start.toLocaleDateString()})`;
         break;
-      case 'week':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+      case 'weekly': {
+        start = new Date(weekStart + 'T00:00:00');
+        end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        label = `Week of ${start.toLocaleDateString()} - ${new Date(end.getTime() - 1).toLocaleDateString()}`;
         break;
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+      case 'monthly': {
+        const [y, m] = monthValue.split('-').map(Number);
+        start = new Date(y, m - 1, 1, 0, 0, 0, 0);
+        end = new Date(y, m, 1, 0, 0, 0, 0);
+        label = `${monthNames[m - 1]} ${y}`;
         break;
+      }
+    }
+
+    setRangeLabel(label);
+
+    let salesQuery = supabase
+      .from('sales')
+      .select('*, sale_items(id, quantity, unit_price, subtotal, products(name))')
+      .eq('branch_id', branch.id)
+      .gte('created_at', start.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (end) {
+      salesQuery = salesQuery.lt('created_at', end.toISOString());
     }
 
     const [salesRes, productsRes] = await Promise.all([
-      supabase
-        .from('sales')
-        .select('*, sale_items(id, quantity, unit_price, subtotal, products(name))')
-        .eq('branch_id', branch.id)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at', { ascending: false }),
+      salesQuery,
       supabase
         .from('branch_stock')
         .select('id, product_id, stock, updated_at, products(name, price, unit)')
@@ -104,10 +141,10 @@ export default function BranchActivityDetail({ branch, onBack }: { branch: Profi
 
       {/* Sales History Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Sales History</h2>
-          <div className="flex gap-2">
-            {(['today', 'week', 'month'] as const).map((p) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {(['today', 'weekly', 'monthly'] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
@@ -116,11 +153,31 @@ export default function BranchActivityDetail({ branch, onBack }: { branch: Profi
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
-                {p}
+                {p === 'today' ? 'Today' : p}
               </button>
             ))}
+            {period === 'weekly' && (
+              <input
+                type="date"
+                value={weekStart}
+                onChange={(e) => setWeekStart(e.target.value)}
+                className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              />
+            )}
+            {period === 'monthly' && (
+              <input
+                type="month"
+                value={monthValue}
+                onChange={(e) => setMonthValue(e.target.value)}
+                className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              />
+            )}
           </div>
         </div>
+
+        <p className="text-sm text-slate-500 mb-4">
+          Showing data for: <span className="font-semibold text-slate-700">{rangeLabel}</span>
+        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">

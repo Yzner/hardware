@@ -1,87 +1,3 @@
-// import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-// import { createClient } from "npm:@supabase/supabase-js@2";
-
-// const corsHeaders = {
-//   "Access-Control-Allow-Origin": "*",
-//   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-//   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-// };
-
-// Deno.serve(async (req: Request) => {
-//   if (req.method === "OPTIONS") {
-//     return new Response(null, { status: 200, headers: corsHeaders });
-//   }
-
-//   try {
-//     const authHeader = req.headers.get("Authorization");
-//     if (!authHeader) throw new Error("Missing authorization header");
-
-//     const supabase = createClient(
-//       Deno.env.get("SUPABASE_URL")!,
-//       Deno.env.get("SUPABASE_ANON_KEY")!,
-//       { global: { headers: { Authorization: authHeader } } }
-//     );
-
-//     // Verify caller is admin
-//     const { data: { user } } = await supabase.auth.getUser();
-//     if (!user) throw new Error("Unauthorized");
-
-//     const supabaseAdmin = createClient(
-//       Deno.env.get("SUPABASE_URL")!,
-//       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-//     );
-
-//     const { data: profile } = await supabaseAdmin
-//       .from("profiles")
-//       .select("role")
-//       .eq("id", user.id)
-//       .maybeSingle();
-
-//     if (!profile || profile.role !== "admin") throw new Error("Only admin can create branches");
-
-//     const { email, password, username, branch_name, location } = await req.json();
-//     if (!email || !password || !username || !branch_name || !location) {
-//       throw new Error("Missing required fields");
-//     }
-
-//     const { data: newUser, error: signUpError } = await supabaseAdmin.auth.signUp({
-//       email,
-//       password,
-//     }, {
-//       data: { username, role: "branch", branch_name, location }
-//     });
-
-//     if (signUpError) throw signUpError;
-
-//     // Update profile with branch details (trigger should handle this, but ensure it)
-//     await supabaseAdmin
-//       .from("profiles")
-//       .update({ branch_name, location, username })
-//       .eq("id", newUser.user?.id);
-
-//     // Log activity
-//     await supabaseAdmin.from("activity_logs").insert({
-//       branch_id: newUser.user?.id,
-//       action: "branch_created",
-//       details: `Branch "${branch_name}" created at ${location}`
-//     });
-
-//     return new Response(
-//       JSON.stringify({ message: "Branch created", id: newUser.user?.id }),
-//       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-//     );
-//   } catch (err) {
-//     return new Response(
-//       JSON.stringify({ error: err.message || "Failed to create branch" }),
-//       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-//     );
-//   }
-// });
-
-
-
-
-
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -93,89 +9,207 @@ const corsHeaders = {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response("ok", {
+      headers: corsHeaders,
+    });
   }
 
   try {
+    // =========================
+    // AUTH CHECK
+    // =========================
+
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+
+    if (!authHeader) {
+      throw new Error("Missing Authorization Header");
+    }
 
     const supabaseUserClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
     );
 
-    const { data: { user }, error: userError } =
-      await supabaseUserClient.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseUserClient.auth.getUser();
 
-    if (userError || !user) throw new Error("Unauthorized");
+    if (authError || !user) {
+      throw new Error("Unauthorized User");
+    }
+
+    // =========================
+    // ADMIN CLIENT
+    // =========================
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // check admin role
-    const { data: profile } = await supabaseAdmin
+    // =========================
+    // CHECK ADMIN ROLE
+    // =========================
+
+    const { data: adminProfile, error: profileError } =
+      await supabaseAdmin
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    if (!adminProfile || adminProfile.role !== "admin") {
+      throw new Error("Only admin can create branch accounts");
+    }
+
+    // =========================
+    // GET BODY
+    // =========================
+
+    const body = await req.json();
+
+    const {
+      email,
+      password,
+      username,
+      branch_name,
+      location,
+    } = body;
+
+    // =========================
+    // VALIDATION
+    // =========================
+
+    if (!email) throw new Error("Email is required");
+    if (!password) throw new Error("Password is required");
+    if (!username) throw new Error("Username is required");
+    if (!branch_name) throw new Error("Branch name is required");
+    if (!location) throw new Error("Location is required");
+
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters");
+    }
+
+    // =========================
+    // CHECK EXISTING USERNAME
+    // =========================
+
+    const { data: existingUsername } = await supabaseAdmin
       .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
 
-    if (!profile || profile.role !== "admin") {
-      throw new Error("Only admin can create branches");
+    if (existingUsername) {
+      throw new Error("Username already exists");
     }
 
-    const { email, password, username, branch_name, location } =
-      await req.json();
+    // =========================
+    // CREATE AUTH USER
+    // =========================
 
-    if (!email || !password || !username || !branch_name || !location) {
-      throw new Error("Missing required fields");
-    }
-
-    // CREATE USER
-    const { data: signUpData, error: signUpError } =
+    const { data: newUserData, error: createUserError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
-        user_metadata: {
-          username,
-          role: "branch",
-          branch_name,
-          location,
-        },
       });
 
-    if (signUpError) throw signUpError;
+    if (createUserError) {
+      throw new Error(createUserError.message);
+    }
 
-    const newUserId = signUpData.user.id;
+    if (!newUserData.user) {
+      throw new Error("Failed to create auth user");
+    }
 
-    // ENSURE PROFILE EXISTS (SAFE FIX)
-    await supabaseAdmin.from("profiles").upsert({
-      id: newUserId,
-      username,
-      role: "branch",
-      branch_name,
-      location,
-    });
+    const newUserId = newUserData.user.id;
 
-    // log activity
-    await supabaseAdmin.from("activity_logs").insert({
-      branch_id: newUserId,
-      action: "branch_created",
-      details: `Branch ${branch_name} created`,
-    });
+    // =========================
+    // INSERT PROFILE
+    // =========================
+
+    const { error: insertProfileError } = await supabaseAdmin
+      .from("profiles")
+      .insert({
+        id: newUserId,
+        username,
+        role: "branch",
+        branch_name,
+        location,
+      });
+
+    if (insertProfileError) {
+      throw new Error(
+        `Profile Insert Error: ${insertProfileError.message}`
+      );
+    }
+
+    // =========================
+    // ACTIVITY LOG
+    // =========================
+
+    const { error: logError } = await supabaseAdmin
+      .from("activity_logs")
+      .insert({
+        branch_id: newUserId,
+        action: "branch_created",
+        details: `Branch ${branch_name} created`,
+      });
+
+    if (logError) {
+      throw new Error(
+        `Activity Log Error: ${logError.message}`
+      );
+    }
+
+    // =========================
+    // SUCCESS
+    // =========================
 
     return new Response(
-      JSON.stringify({ message: "Branch created", id: newUserId }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: true,
+        message: "Branch account created successfully",
+        user_id: newUserId,
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
+
   } catch (err: any) {
+
+    console.error("EDGE FUNCTION ERROR:", err);
+
     return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: false,
+        error: err.message || "Unknown server error",
+      }),
+      {
+        status: 400,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
     );
   }
 });
