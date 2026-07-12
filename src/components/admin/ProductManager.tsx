@@ -6,6 +6,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  cost_price: number;
   stock: number;
   unit: string;
   created_at: string;
@@ -17,7 +18,7 @@ export default function ProductManager() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: '', price: '', stock: '', unit: 'pcs' });
+  const [form, setForm] = useState({ name: '', price: '', cost_price: '', stock: '', unit: 'pcs' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,13 +34,13 @@ export default function ProductManager() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', price: '', stock: '', unit: 'pcs' });
+    setForm({ name: '', price: '', cost_price: '', stock: '', unit: 'pcs' });
     setShowForm(true);
   };
 
   const openEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, price: String(p.price), stock: String(p.stock), unit: p.unit });
+    setForm({ name: p.name, price: String(p.price), cost_price: String(p.cost_price || ''), stock: String(p.stock), unit: p.unit });
     setShowForm(true);
   };
 
@@ -51,6 +52,7 @@ export default function ProductManager() {
     const payload = {
       name: form.name,
       price: parseFloat(form.price),
+      cost_price: parseFloat(form.cost_price) || 0,
       stock: parseInt(form.stock),
       unit: form.unit,
       updated_at: new Date().toISOString(),
@@ -113,7 +115,9 @@ export default function ProductManager() {
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/50">
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
-              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cost Price</th>
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Selling Price</th>
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Profit/Unit</th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit</th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
@@ -123,7 +127,11 @@ export default function ProductManager() {
             {filtered.map((p) => (
               <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{p.name}</td>
+                <td className="px-6 py-4 text-sm text-slate-600 text-right">${Number(p.cost_price || 0).toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm text-slate-600 text-right">${Number(p.price).toFixed(2)}</td>
+                <td className={`px-6 py-4 text-sm font-medium text-right ${Number(p.price) - Number(p.cost_price || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  ${(Number(p.price) - Number(p.cost_price || 0)).toFixed(2)}
+                </td>
                 <td className="px-6 py-4 text-sm text-right">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold ${p.stock > 10 ? 'bg-emerald-50 text-emerald-700' : p.stock > 0 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
                     {p.stock}
@@ -137,7 +145,7 @@ export default function ProductManager() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400">No products found</td></tr>
+              <tr><td colSpan={7} className="px-6 py-8 text-center text-slate-400">No products found</td></tr>
             )}
           </tbody>
         </table>
@@ -155,11 +163,17 @@ export default function ProductManager() {
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Product Name</label>
                 <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" required />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Price</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Cost Price ($)</label>
+                  <input type="number" step="0.01" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Selling Price ($)</label>
                   <input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" required />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Stock</label>
                   <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" required />

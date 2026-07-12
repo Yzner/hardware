@@ -38,17 +38,18 @@ Deno.serve(async (req: Request) => {
 
     if (!profile || profile.role !== "branch") throw new Error("Only branch users can create sales");
 
-    const { items } = await req.json();
+    const { items, paymentMethod, paymentStatus } = await req.json();
     if (!items || !items.length) throw new Error("No items in sale");
 
-    // Validate stock availability for all items
+    // Validate stock availability for all items and pull cost_price + price
     let total = 0;
+    let totalCost = 0;
     const saleItems = [];
 
     for (const item of items) {
       const { data: branchStock } = await supabaseAdmin
         .from("branch_stock")
-        .select("stock, products(price, name)")
+        .select("stock, products(price, cost_price, name)")
         .eq("product_id", item.product_id)
         .eq("branch_id", profile.id)
         .maybeSingle();
@@ -58,36 +59,53 @@ Deno.serve(async (req: Request) => {
       }
 
       const unitPrice = parseFloat(branchStock.products.price);
+      // cost_price may be null on older products — fall back to 0 rather than NaN
+      const unitCost = branchStock.products.cost_price != null
+        ? parseFloat(branchStock.products.cost_price)
+        : 0;
+
       const subtotal = unitPrice * item.quantity;
+      const costSubtotal = unitCost * item.quantity;
+
       total += subtotal;
+      totalCost += costSubtotal;
 
       saleItems.push({
         product_id: item.product_id,
         quantity: item.quantity,
         unit_price: unitPrice,
-        subtotal
+        cost_price: unitCost,       // <-- this is what was missing
+        subtotal,
       });
     }
 
     // Create the sale
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("sales")
-      .insert({ branch_id: profile.id, total })
+      .insert({
+        branch_id: profile.id,
+        total,
+        total_cost: totalCost,      // optional: track total cost at sale level too
+        payment_method: paymentMethod ?? "cash",
+        payment_status: paymentStatus ?? "received",
+      })
       .select()
       .single();
 
     if (saleError) throw saleError;
 
-    // Create sale items and deduct branch stock
-    for (let i = 0; i < saleItems.length; i++) {
-      const si = saleItems[i];
-      await supabaseAdmin.from("sale_items").insert({
+    // Create sale items (with cost_price) and deduct branch stock
+    for (const si of saleItems) {
+      const { error: itemError } = await supabaseAdmin.from("sale_items").insert({
         sale_id: sale.id,
         product_id: si.product_id,
         quantity: si.quantity,
         unit_price: si.unit_price,
-        subtotal: si.subtotal
+        cost_price: si.cost_price,  // <-- now actually saved
+        subtotal: si.subtotal,
       });
+
+      if (itemError) throw itemError;
 
       // Deduct branch stock
       const { data: currentStock } = await supabaseAdmin
@@ -109,7 +127,7 @@ Deno.serve(async (req: Request) => {
     await supabaseAdmin.from("activity_logs").insert({
       branch_id: profile.id,
       action: "sale_created",
-      details: `Sale #${sale.id.substring(0, 8)} created with total $${total.toFixed(2)}`
+      details: `Sale #${sale.id.substring(0, 8)} created with total $${total.toFixed(2)}`,
     });
 
     return new Response(

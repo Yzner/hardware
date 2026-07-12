@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Minus, DollarSign, PiggyBank, List } from 'lucide-react';
 
 interface SaleRow {
+  id: string;
   branch_id: string;
   total: number;
   created_at: string;
+  payment_status?: string;
   branch: { branch_name: string } | null;
+  sale_items: { unit_cost_price: number; unit_price: number; quantity: number }[];
 }
 
 interface BranchReport {
   branch_name: string;
   branch_id: string;
   total: number;
+  cost: number;
+  profit: number;
   count: number;
 }
 
@@ -21,7 +26,7 @@ interface TrendPoint {
   value: number;
 }
 
-type Period = 'daily' | 'weekly' | 'monthly';
+type Period = 'all' | 'daily' | 'weekly' | 'monthly';
 type TrendPeriod = 'daily' | 'weekly' | 'monthly';
 
 const toISODate = (d: Date) => {
@@ -52,7 +57,13 @@ export default function IncomeReports() {
   const [reports, setReports] = useState<BranchReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [grandTotal, setGrandTotal] = useState(0);
+  const [grandCost, setGrandCost] = useState(0);
+  const [grandProfit, setGrandProfit] = useState(0);
   const [rangeLabel, setRangeLabel] = useState('');
+
+  // All transactions
+  const [allTransactions, setAllTransactions] = useState<SaleRow[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   // Trend chart state
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>('daily');
@@ -74,6 +85,65 @@ export default function IncomeReports() {
 
   const loadReports = async () => {
     setLoading(true);
+    setTransactionsLoading(true);
+
+    // For "all" period, we load all transactions
+    if (period === 'all') {
+      setRangeLabel('All Time');
+
+      const { data } = await supabase
+        .from('sales')
+        .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity)')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setAllTransactions(data as SaleRow[]);
+
+        const branchMap: Record<string, BranchReport> = {};
+        let totalRevenue = 0;
+        let totalCost = 0;
+
+        (data as SaleRow[]).forEach((sale) => {
+          const name = sale.branch?.branch_name || 'Unknown';
+          if (!branchMap[sale.branch_id]) {
+            branchMap[sale.branch_id] = { branch_name: name, branch_id: sale.branch_id, total: 0, cost: 0, profit: 0, count: 0 };
+          }
+
+          let saleCost = 0;
+          let saleRevenue = 0;
+          if (sale.sale_items && sale.sale_items.length > 0) {
+            sale.sale_items.forEach(item => {
+              saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+              saleRevenue += Number(item.unit_price) * item.quantity;
+            });
+          } else {
+            saleRevenue = Number(sale.total);
+          }
+
+          branchMap[sale.branch_id].total += saleRevenue;
+          branchMap[sale.branch_id].cost += saleCost;
+          branchMap[sale.branch_id].profit += saleRevenue - saleCost;
+          branchMap[sale.branch_id].count += 1;
+          totalRevenue += saleRevenue;
+          totalCost += saleCost;
+        });
+
+        setReports(Object.values(branchMap).sort((a, b) => b.total - a.total));
+        setGrandTotal(totalRevenue);
+        setGrandCost(totalCost);
+        setGrandProfit(totalRevenue - totalCost);
+      } else {
+        setAllTransactions([]);
+        setReports([]);
+        setGrandTotal(0);
+        setGrandCost(0);
+        setGrandProfit(0);
+      }
+      setLoading(false);
+      setTransactionsLoading(false);
+      return;
+    }
+
     let start: Date;
     let end: Date | null = null;
     let label = '';
@@ -106,7 +176,7 @@ export default function IncomeReports() {
 
     let query = supabase
       .from('sales')
-      .select('*, branch:profiles!sales_branch_id_fkey(branch_name)')
+      .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity)')
       .gte('created_at', start.toISOString())
       .order('created_at', { ascending: false });
 
@@ -117,24 +187,52 @@ export default function IncomeReports() {
     const { data } = await query;
 
     if (data) {
+      setAllTransactions(data as SaleRow[]);
+
       const branchMap: Record<string, BranchReport> = {};
-      let total = 0;
+      let totalRevenue = 0;
+      let totalCost = 0;
+
       (data as SaleRow[]).forEach((sale) => {
         const name = sale.branch?.branch_name || 'Unknown';
         if (!branchMap[sale.branch_id]) {
-          branchMap[sale.branch_id] = { branch_name: name, branch_id: sale.branch_id, total: 0, count: 0 };
+          branchMap[sale.branch_id] = { branch_name: name, branch_id: sale.branch_id, total: 0, cost: 0, profit: 0, count: 0 };
         }
-        branchMap[sale.branch_id].total += Number(sale.total);
+
+        // Calculate cost and revenue from sale items
+        let saleCost = 0;
+        let saleRevenue = 0;
+        if (sale.sale_items && sale.sale_items.length > 0) {
+          sale.sale_items.forEach(item => {
+            saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+            saleRevenue += Number(item.unit_price) * item.quantity;
+          });
+        } else {
+          // Fallback if no sale_items
+          saleRevenue = Number(sale.total);
+        }
+
+        branchMap[sale.branch_id].total += saleRevenue;
+        branchMap[sale.branch_id].cost += saleCost;
+        branchMap[sale.branch_id].profit += saleRevenue - saleCost;
         branchMap[sale.branch_id].count += 1;
-        total += Number(sale.total);
+        totalRevenue += saleRevenue;
+        totalCost += saleCost;
       });
+
       setReports(Object.values(branchMap).sort((a, b) => b.total - a.total));
-      setGrandTotal(total);
+      setGrandTotal(totalRevenue);
+      setGrandCost(totalCost);
+      setGrandProfit(totalRevenue - totalCost);
     } else {
+      setAllTransactions([]);
       setReports([]);
       setGrandTotal(0);
+      setGrandCost(0);
+      setGrandProfit(0);
     }
     setLoading(false);
+    setTransactionsLoading(false);
   };
 
   const loadTrend = async () => {
@@ -347,7 +445,7 @@ export default function IncomeReports() {
       {/* Period selector for branch breakdown */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="flex gap-2">
-          {(['daily', 'weekly', 'monthly'] as const).map((p) => (
+          {(['all', 'daily', 'weekly', 'monthly'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -355,7 +453,7 @@ export default function IncomeReports() {
                 period === p ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <Calendar className="w-4 h-4" />
+              {p === 'all' ? <List className="w-4 h-4" /> : <Calendar className="w-4 h-4" />}
               {p}
             </button>
           ))}
@@ -390,21 +488,50 @@ export default function IncomeReports() {
         Showing data for: <span className="font-semibold text-slate-700">{rangeLabel}</span>
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-slate-500">Total Revenue</span>
-            <TrendingUp className="w-5 h-5 text-emerald-500" />
+            <DollarSign className="w-5 h-5 text-emerald-500" />
           </div>
           <p className="text-3xl font-bold text-slate-900">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-500">Total Cost</span>
+            <TrendingDown className="w-5 h-5 text-red-500" />
+          </div>
+          <p className="text-3xl font-bold text-slate-900">${grandCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-500">Total Profit</span>
+            <PiggyBank className="w-5 h-5 text-blue-500" />
+          </div>
+          <p className={`text-3xl font-bold ${grandProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            ${grandProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </p>
+          {grandTotal > 0 && (
+            <p className="text-xs text-slate-500 mt-1">
+              {((grandProfit / grandTotal) * 100).toFixed(1)}% margin
+            </p>
+          )}
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <span className="text-sm font-medium text-slate-500">Total Transactions</span>
           <p className="text-3xl font-bold text-slate-900 mt-2">{reports.reduce((s, r) => s + r.count, 0)}</p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6 flex items-center justify-between">
+        <div>
           <span className="text-sm font-medium text-slate-500">Active Branches</span>
-          <p className="text-3xl font-bold text-slate-900 mt-2">{reports.length}</p>
+          <p className="text-2xl font-bold text-slate-900">{reports.length}</p>
+        </div>
+        <div className="text-right">
+          <span className="text-sm font-medium text-slate-500">Profit Margin</span>
+          <p className={`text-2xl font-bold ${grandProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            {grandTotal > 0 ? ((grandProfit / grandTotal) * 100).toFixed(1) : 0}%
+          </p>
         </div>
       </div>
 
@@ -415,6 +542,8 @@ export default function IncomeReports() {
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Branch</th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Transactions</th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Revenue</th>
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cost</th>
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Profit</th>
             </tr>
           </thead>
           <tbody>
@@ -423,13 +552,98 @@ export default function IncomeReports() {
                 <td className="px-6 py-4 text-sm font-medium text-slate-900">{r.branch_name}</td>
                 <td className="px-6 py-4 text-sm text-slate-600 text-right">{r.count}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-slate-900 text-right">${r.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className="px-6 py-4 text-sm text-red-600 text-right">${r.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className={`px-6 py-4 text-sm font-semibold text-right ${r.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  ${r.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </td>
               </tr>
             ))}
             {reports.length === 0 && (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-slate-400">No sales data for this period</td></tr>
+              <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400">No sales data for this period</td></tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* All Transactions Table */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">All Transactions ({allTransactions.length})</h2>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Branch</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sale ID</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Revenue</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cost</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Profit</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactionsLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center">
+                      <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto" />
+                    </td>
+                  </tr>
+                ) : allTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-400">No transactions found</td>
+                  </tr>
+                ) : (
+                  allTransactions.map((tx) => {
+                    let saleCost = 0;
+                    let saleRevenue = 0;
+                    if (tx.sale_items && tx.sale_items.length > 0) {
+                      tx.sale_items.forEach(item => {
+                        saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+                        saleRevenue += Number(item.unit_price) * item.quantity;
+                      });
+                    } else {
+                      saleRevenue = Number(tx.total);
+                    }
+                    const profit = saleRevenue - saleCost;
+
+                    return (
+                      <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {new Date(tx.created_at).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                          {tx.branch?.branch_name || 'Unknown'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-500 font-mono">
+                          {tx.id.substring(0, 8)}...
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-900 text-right">
+                          ${saleRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-red-600 text-right">
+                          ${saleCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className={`px-4 py-3 text-sm font-semibold text-right ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          ${profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            tx.payment_status === 'assigned' ? 'bg-amber-100 text-amber-700' :
+                            tx.payment_status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {tx.payment_status || 'received'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
