@@ -34,6 +34,20 @@ interface PaymentForm {
   notes: string;
 }
 
+interface SaleItem {
+  unit_cost_price: number | null;
+  unit_price: number;
+  quantity: number;
+  products: { cost_price: number }[] | { cost_price: number } | null;
+}
+
+interface SaleRecord {
+  branch_id: string;
+  total: number;
+  sale_items: SaleItem[] | null;
+  branch: { branch_name: string }[] | { branch_name: string } | null;
+}
+
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'GCash', 'Maya', 'Cheque', 'Other'];
 
 const fmt = (n: number) =>
@@ -86,21 +100,47 @@ export default function CollectionSummary() {
     if (salesRes.error) { setError(salesRes.error.message); setLoading(false); return; }
 
     const branchSales: Record<string, { branch_name: string; sales: number; cost: number }> = {};
-    for (const sale of (salesRes.data || [])) {
+
+    for (const sale of (salesRes.data || []) as SaleRecord[]) {
       const bid = sale.branch_id;
-      const bname = (sale.branch as { branch_name: string } | null)?.branch_name || 'Unknown';
+
+      // Handle branch - could be array or object depending on Supabase config
+      let bname = 'Unknown';
+      if (sale.branch) {
+        if (Array.isArray(sale.branch)) {
+          bname = sale.branch[0]?.branch_name || 'Unknown';
+        } else {
+          bname = sale.branch.branch_name || 'Unknown';
+        }
+      }
+
       if (!branchSales[bid]) branchSales[bid] = { branch_name: bname, sales: 0, cost: 0 };
-      let rev = 0; let cost = 0;
-      const items = (sale.sale_items as { unit_cost_price: number; unit_price: number; quantity: number; products: { cost_price: number } | null }[]) || [];
+
+      let rev = 0;
+      let cost = 0;
+      const items = sale.sale_items || [];
+
       if (items.length > 0) {
         items.forEach(it => {
           rev += Number(it.unit_price) * it.quantity;
-          const cp = Number(it.unit_cost_price) > 0 ? Number(it.unit_cost_price) : Number(it.products?.cost_price || 0);
+
+          // Handle products - could be array or object
+          let productCostPrice = 0;
+          if (it.products) {
+            if (Array.isArray(it.products)) {
+              productCostPrice = Number(it.products[0]?.cost_price || 0);
+            } else {
+              productCostPrice = Number(it.products.cost_price || 0);
+            }
+          }
+
+          const cp = Number(it.unit_cost_price) > 0 ? Number(it.unit_cost_price) : productCostPrice;
           cost += cp * it.quantity;
         });
       } else {
         rev = Number(sale.total);
       }
+
       branchSales[bid].sales += rev;
       branchSales[bid].cost += cost;
     }
