@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Calendar, DollarSign, TrendingUp, TrendingDown, CreditCard,
-  Wallet, Search, Download, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp
+  Wallet, Search, Download, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp,
+  Package, Clock
 } from 'lucide-react';
 
 interface BranchRow {
@@ -13,6 +14,18 @@ interface BranchRow {
   total_profit: number;
   amount_received: number;
   remaining_balance: number;
+}
+
+interface ItemRow {
+  date: string;
+  branch_name: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  unit_cost: number;
+  subtotal: number;
+  cost: number;
+  profit: number;
 }
 
 interface Collection {
@@ -34,26 +47,18 @@ interface PaymentForm {
   notes: string;
 }
 
-interface SaleItem {
-  unit_cost_price: number | null;
-  unit_price: number;
-  quantity: number;
-  products: { cost_price: number }[] | { cost_price: number } | null;
-}
-
-interface SaleRecord {
-  branch_id: string;
-  total: number;
-  sale_items: SaleItem[] | null;
-  branch: { branch_name: string }[] | { branch_name: string } | null;
-}
-
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'GCash', 'Maya', 'Cheque', 'Other'];
 
 const fmt = (n: number) =>
   n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const toISO = (d: Date) => d.toISOString().slice(0, 10);
+
+const fmtDate = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 export default function CollectionSummary() {
   const today = new Date();
@@ -62,10 +67,12 @@ export default function CollectionSummary() {
   const [dateFrom, setDateFrom] = useState(toISO(firstOfMonth));
   const [dateTo, setDateTo] = useState(toISO(today));
   const [rows, setRows] = useState<BranchRow[]>([]);
+  const [itemRows, setItemRows] = useState<ItemRow[]>([]);
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [itemSearch, setItemSearch] = useState('');
   const [sortField, setSortField] = useState<keyof BranchRow>('branch_name');
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -84,10 +91,11 @@ export default function CollectionSummary() {
     const startTs = dateFrom + 'T00:00:00.000Z';
     const endTs = dateTo + 'T23:59:59.999Z';
 
+    // Step 1 — fetch sales + branch names + collections in parallel
     const [salesRes, collectionsRes] = await Promise.all([
       supabase
         .from('sales')
-        .select('branch_id, total, sale_items(unit_cost_price, unit_price, quantity, products(cost_price)), branch:profiles!sales_branch_id_fkey(branch_name)')
+        .select('id, branch_id, total, created_at, branch:profiles!sales_branch_id_fkey(branch_name)')
         .gte('created_at', startTs)
         .lte('created_at', endTs),
       supabase
@@ -99,50 +107,97 @@ export default function CollectionSummary() {
 
     if (salesRes.error) { setError(salesRes.error.message); setLoading(false); return; }
 
+    const salesData = salesRes.data || [];
+    if (salesData.length === 0) {
+      setRows([]);
+      setItemRows([]);
+      setGenerated(true);
+      setLoading(false);
+      return;
+    }
+
+    const saleIds = salesData.map(s => s.id);
+
+    // Step 2 — fetch sale_items flat (only columns from the migration schema)
+    const saleItemsRes = await supabase
+      .from('sale_items')
+      .select('id, sale_id, product_id, quantity, unit_price, subtotal')
+      .in('sale_id', saleIds);
+
+    if (saleItemsRes.error) {
+      setError('Failed to load sale items: ' + saleItemsRes.error.message);
+      setLoading(false);
+      return;
+    }
+
+    const saleItemsData = saleItemsRes.data || [];
+
+    // Step 3 — fetch all products to get name + cost_price
+    const productsRes = await supabase
+      .from('products')
+      .select('id, name, price, cost_price');
+
+    const productMap: Record<string, { name: string; price: number; cost_price: number }> = {};
+    if (!productsRes.error && productsRes.data) {
+      productsRes.data.forEach(p => {
+        productMap[p.id] = {
+          name: p.name,
+          price: Number(p.price),
+          cost_price: Number((p as { cost_price?: number }).cost_price || 0),
+        };
+      });
+    }
+
+    // Build sale_id → sale lookup
+    const saleLookup: Record<string, { branch_id: string; branch_name: string; created_at: string; total: number }> = {};
+    salesData.forEach(s => {
+      saleLookup[s.id] = {
+        branch_id: s.branch_id,
+        branch_name: (s.branch as { branch_name: string } | null)?.branch_name || 'Unknown',
+        created_at: s.created_at,
+        total: Number(s.total),
+      };
+    });
+
     const branchSales: Record<string, { branch_name: string; sales: number; cost: number }> = {};
+    const items: ItemRow[] = [];
 
-    for (const sale of (salesRes.data || []) as SaleRecord[]) {
-      const bid = sale.branch_id;
+    if (saleItemsData.length > 0) {
+      saleItemsData.forEach(it => {
+        const sale = saleLookup[it.sale_id];
+        if (!sale) return;
+        const { branch_id, branch_name, created_at } = sale;
+        if (!branchSales[branch_id]) branchSales[branch_id] = { branch_name, sales: 0, cost: 0 };
 
-      // Handle branch - could be array or object depending on Supabase config
-      let bname = 'Unknown';
-      if (sale.branch) {
-        if (Array.isArray(sale.branch)) {
-          bname = sale.branch[0]?.branch_name || 'Unknown';
-        } else {
-          bname = sale.branch.branch_name || 'Unknown';
-        }
-      }
+        const prod = productMap[it.product_id];
+        const unitPrice = Number(it.unit_price) > 0 ? Number(it.unit_price) : (prod?.price || 0);
+        const unitCost = prod?.cost_price || 0;
+        const sub = Number(it.subtotal) > 0 ? Number(it.subtotal) : unitPrice * it.quantity;
+        const itemCost = unitCost * it.quantity;
 
-      if (!branchSales[bid]) branchSales[bid] = { branch_name: bname, sales: 0, cost: 0 };
+        branchSales[branch_id].sales += sub;
+        branchSales[branch_id].cost += itemCost;
 
-      let rev = 0;
-      let cost = 0;
-      const items = sale.sale_items || [];
-
-      if (items.length > 0) {
-        items.forEach(it => {
-          rev += Number(it.unit_price) * it.quantity;
-
-          // Handle products - could be array or object
-          let productCostPrice = 0;
-          if (it.products) {
-            if (Array.isArray(it.products)) {
-              productCostPrice = Number(it.products[0]?.cost_price || 0);
-            } else {
-              productCostPrice = Number(it.products.cost_price || 0);
-            }
-          }
-
-          const cp = Number(it.unit_cost_price) > 0 ? Number(it.unit_cost_price) : productCostPrice;
-          cost += cp * it.quantity;
+        items.push({
+          date: created_at,
+          branch_name,
+          product_name: prod?.name || 'Unknown Product',
+          quantity: it.quantity,
+          unit_price: unitPrice,
+          unit_cost: unitCost,
+          subtotal: sub,
+          cost: itemCost,
+          profit: sub - itemCost,
         });
-      } else {
-        rev = Number(sale.total);
-      }
-
-      branchSales[bid].sales += rev;
-      branchSales[bid].cost += cost;
+      });
+    } else {
+      // Fallback: no line items, use sale totals
+      salesData.forEach(s => {
+        const bid = s.branch_id;
+        const bname = (s.branch as { branch_name: string } | null)?.branch_name || 'Unknown';
+        if (!branchSales[bid]) branchSales[bid] = { branch_name: bname, sales: 0, cost: 0 };
+        branchSales[bid].sales += Number(s.total);
+      });
     }
 
     const collections: Collection[] = collectionsRes.data || [];
@@ -164,7 +219,10 @@ export default function CollectionSummary() {
       };
     });
 
+    items.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : a.branch_name.localeCompare(b.branch_name));
+
     setRows(result);
+    setItemRows(items);
     setGenerated(true);
     setLoading(false);
   }, [dateFrom, dateTo]);
@@ -183,6 +241,11 @@ export default function CollectionSummary() {
       return sortAsc ? (Number(av) - Number(bv)) : (Number(bv) - Number(av));
     });
 
+  const filteredItems = itemRows.filter(i =>
+    i.branch_name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+    i.product_name.toLowerCase().includes(itemSearch.toLowerCase())
+  );
+
   const totals = rows.reduce(
     (acc, r) => ({
       sales: acc.sales + r.total_sales,
@@ -193,6 +256,13 @@ export default function CollectionSummary() {
     }),
     { sales: 0, cost: 0, profit: 0, received: 0, remaining: 0 }
   );
+
+  const itemTotals = itemRows.reduce((a, i) => ({
+    qty: a.qty + i.quantity,
+    subtotal: a.subtotal + i.subtotal,
+    cost: a.cost + i.cost,
+    profit: a.profit + i.profit,
+  }), { qty: 0, subtotal: 0, cost: 0, profit: 0 });
 
   const openPaymentModal = (branch: BranchRow) => {
     setModalBranch(branch);
@@ -235,19 +305,58 @@ export default function CollectionSummary() {
   };
 
   const exportCSV = () => {
-    const header = ['Branch Name', 'Total Sales', 'Total Cost', 'Total Profit', 'Amount Received', 'Remaining Balance'];
-    const csvRows = [
-      header.join(','),
-      ...filtered.map(r => [
+    const lines: string[] = [];
+
+    lines.push('COLLECTION SUMMARY REPORT');
+    lines.push(`Period: ${dateFrom} to ${dateTo}`);
+    lines.push('');
+    lines.push('--- BRANCH SUMMARY ---');
+    lines.push(['Branch Name', 'Total Sales', 'Total Cost', 'Total Profit', 'Amount Received', 'Remaining Balance'].join(','));
+    filtered.forEach(r => {
+      lines.push([
         `"${r.branch_name}"`,
         r.total_sales.toFixed(2),
         r.total_cost.toFixed(2),
         r.total_profit.toFixed(2),
         r.amount_received.toFixed(2),
         r.remaining_balance.toFixed(2),
-      ].join(','))
-    ];
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+      ].join(','));
+    });
+    lines.push([
+      '"TOTAL"',
+      totals.sales.toFixed(2),
+      totals.cost.toFixed(2),
+      totals.profit.toFixed(2),
+      totals.received.toFixed(2),
+      totals.remaining.toFixed(2),
+    ].join(','));
+
+    lines.push('');
+    lines.push('--- ITEMIZED SALES (ALL PRODUCTS SOLD) ---');
+    lines.push(['Date', 'Branch', 'Product', 'Qty', 'Unit Price', 'Unit Cost', 'Subtotal', 'Cost', 'Profit'].join(','));
+    itemRows.forEach(i => {
+      lines.push([
+        `"${fmtDate(i.date)}"`,
+        `"${i.branch_name}"`,
+        `"${i.product_name}"`,
+        i.quantity,
+        i.unit_price.toFixed(2),
+        i.unit_cost.toFixed(2),
+        i.subtotal.toFixed(2),
+        i.cost.toFixed(2),
+        i.profit.toFixed(2),
+      ].join(','));
+    });
+    lines.push([
+      '"TOTAL"',
+      '""', '""', itemTotals.qty,
+      '""', '""',
+      itemTotals.subtotal.toFixed(2),
+      itemTotals.cost.toFixed(2),
+      itemTotals.profit.toFixed(2),
+    ].join(','));
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -259,30 +368,37 @@ export default function CollectionSummary() {
   const exportPDF = () => {
     const win = window.open('', '_blank');
     if (!win) return;
+
     const html = `<!DOCTYPE html><html><head><title>Collection Summary</title>
 <style>
   body { font-family: Arial, sans-serif; padding: 24px; color: #1e293b; }
   h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin: 28px 0 10px; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
   .period { color: #64748b; font-size: 13px; margin-bottom: 20px; }
-  .cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-  .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 20px; min-width: 140px; }
-  .card-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
-  .card-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { background: #f8fafc; text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-  td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 18px; min-width: 130px; }
+  .card-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+  .card-value { font-size: 17px; font-weight: 700; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+  th { background: #f8fafc; text-align: left; padding: 7px 10px; font-size: 10px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
   .num { text-align: right; }
   tfoot td { font-weight: 700; background: #f8fafc; }
+  .item-table th, .item-table td { font-size: 11px; }
+  @media print { body { padding: 12px; } }
 </style></head><body>
 <h1>Collection Summary Report</h1>
-<div class="period">Period: ${dateFrom} to ${dateTo}</div>
+<div class="period">Period: ${fmtDate(dateFrom)} to ${fmtDate(dateTo)}</div>
+
 <div class="cards">
-  <div class="card"><div class="card-label">Total Sales</div><div class="card-value">&#8369;${fmt(totals.sales)}</div></div>
   <div class="card"><div class="card-label">Total Cost</div><div class="card-value">&#8369;${fmt(totals.cost)}</div></div>
+  <div class="card"><div class="card-label">Total Sales</div><div class="card-value">&#8369;${fmt(totals.sales)}</div></div>
   <div class="card"><div class="card-label">Total Profit</div><div class="card-value">&#8369;${fmt(totals.profit)}</div></div>
   <div class="card"><div class="card-label">Amount Received</div><div class="card-value">&#8369;${fmt(totals.received)}</div></div>
   <div class="card"><div class="card-label">Remaining Balance</div><div class="card-value">&#8369;${fmt(totals.remaining)}</div></div>
 </div>
+
+<h2>Branch Summary</h2>
 <table>
   <thead><tr>
     <th>Branch Name</th><th class="num">Total Sales</th><th class="num">Total Cost</th>
@@ -307,6 +423,40 @@ export default function CollectionSummary() {
     <td class="num">&#8369;${fmt(totals.remaining)}</td>
   </tr></tfoot>
 </table>
+
+<h2>Itemized Sales - All Products Sold</h2>
+<table class="item-table">
+  <thead><tr>
+    <th>Date</th><th>Branch</th><th>Product</th><th class="num">Qty</th>
+    <th class="num">Unit Price</th><th class="num">Unit Cost</th>
+    <th class="num">Subtotal</th><th class="num">Cost</th><th class="num">Profit</th>
+  </tr></thead>
+  <tbody>
+    ${itemRows.length === 0
+      ? '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:16px;">No items sold in this period</td></tr>'
+      : itemRows.map(i => `<tr>
+      <td>${fmtDate(i.date)}</td>
+      <td>${i.branch_name}</td>
+      <td>${i.product_name}</td>
+      <td class="num">${i.quantity}</td>
+      <td class="num">&#8369;${fmt(i.unit_price)}</td>
+      <td class="num">&#8369;${fmt(i.unit_cost)}</td>
+      <td class="num">&#8369;${fmt(i.subtotal)}</td>
+      <td class="num">&#8369;${fmt(i.cost)}</td>
+      <td class="num">&#8369;${fmt(i.profit)}</td>
+    </tr>`).join('')}
+  </tbody>
+  ${itemRows.length > 0 ? `<tfoot><tr>
+    <td colspan="3">TOTAL</td>
+    <td class="num">${itemTotals.qty}</td>
+    <td class="num"></td>
+    <td class="num"></td>
+    <td class="num">&#8369;${fmt(itemTotals.subtotal)}</td>
+    <td class="num">&#8369;${fmt(itemTotals.cost)}</td>
+    <td class="num">&#8369;${fmt(itemTotals.profit)}</td>
+  </tr></tfoot>` : ''}
+</table>
+
 </body></html>`;
     win.document.write(html);
     win.document.close();
@@ -388,9 +538,28 @@ export default function CollectionSummary() {
             <SummaryCard label="Remaining Balance" value={totals.remaining} icon={<Wallet className="w-4 h-4" />} color={totals.remaining > 0 ? 'amber' : 'slate'} />
           </div>
 
-          {/* Table */}
+          {/* Export Buttons */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export PDF
+            </button>
+          </div>
+
+          {/* Branch Table */}
           <div className="bg-white rounded-xl border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Branch Summary</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
@@ -400,22 +569,6 @@ export default function CollectionSummary() {
                   onChange={e => setSearch(e.target.value)}
                   className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent w-56 bg-slate-50"
                 />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={exportCSV}
-                  className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Export CSV
-                </button>
-                <button
-                  onClick={exportPDF}
-                  className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Export PDF
-                </button>
               </div>
             </div>
 
@@ -483,6 +636,79 @@ export default function CollectionSummary() {
                       <td className="px-5 py-3.5 text-sm text-right font-bold text-teal-600">&#8369;{fmt(totals.received)}</td>
                       <td className={`px-5 py-3.5 text-sm text-right font-bold ${totals.remaining > 0 ? 'text-amber-600' : 'text-slate-400'}`}>&#8369;{fmt(totals.remaining)}</td>
                       <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Itemized Sales Table */}
+          <div className="bg-white rounded-xl border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-slate-400" />
+                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Itemized Sales</h2>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{itemRows.length} items</span>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by branch or product..."
+                  value={itemSearch}
+                  onChange={e => setItemSearch(e.target.value)}
+                  className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent w-64 bg-slate-50"
+                />
+              </div>
+            </div>
+
+            {filteredItems.length === 0 ? (
+              <div className="py-16 text-center text-slate-400">
+                {itemRows.length === 0 ? 'No items sold in the selected period.' : 'No items match your search.'}
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b border-slate-100">
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left">
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Date</span>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left">Branch</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left">Product</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Qty</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Unit Price</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Unit Cost</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Subtotal</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Cost</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map((i, idx) => (
+                      <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                        <td className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">{fmtDate(i.date)}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{i.branch_name}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{i.product_name}</td>
+                        <td className="px-4 py-3 text-sm text-right text-slate-600">{i.quantity}</td>
+                        <td className="px-4 py-3 text-sm text-right text-slate-600">&#8369;{fmt(i.unit_price)}</td>
+                        <td className="px-4 py-3 text-sm text-right text-rose-500">&#8369;{fmt(i.unit_cost)}</td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-slate-800">&#8369;{fmt(i.subtotal)}</td>
+                        <td className="px-4 py-3 text-sm text-right text-rose-600">&#8369;{fmt(i.cost)}</td>
+                        <td className={`px-4 py-3 text-sm text-right font-semibold ${i.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>&#8369;{fmt(i.profit)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="sticky bottom-0 bg-slate-50">
+                    <tr className="border-t-2 border-slate-200">
+                      <td colSpan={3} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Total</td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-slate-900">{itemTotals.qty}</td>
+                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3" />
+                      <td className="px-4 py-3 text-sm text-right font-bold text-slate-900">&#8369;{fmt(itemTotals.subtotal)}</td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-rose-600">&#8369;{fmt(itemTotals.cost)}</td>
+                      <td className={`px-4 py-3 text-sm text-right font-bold ${itemTotals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>&#8369;{fmt(itemTotals.profit)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -626,13 +852,13 @@ function SummaryCard({ label, value, icon, color }: {
   icon: React.ReactNode;
   color: 'emerald' | 'blue' | 'rose' | 'teal' | 'amber' | 'slate';
 }) {
-  const colors: Record<string, { bg: string; text: string; border: string; value: string }> = {
-    emerald: { bg: 'bg-emerald-50 text-emerald-600', text: 'text-emerald-700', border: 'border-emerald-100', value: 'text-emerald-700' },
-    blue: { bg: 'bg-blue-50 text-blue-600', text: 'text-blue-700', border: 'border-blue-100', value: 'text-blue-700' },
-    rose: { bg: 'bg-rose-50 text-rose-600', text: 'text-rose-700', border: 'border-rose-100', value: 'text-rose-700' },
-    teal: { bg: 'bg-teal-50 text-teal-600', text: 'text-teal-700', border: 'border-teal-100', value: 'text-teal-700' },
-    amber: { bg: 'bg-amber-50 text-amber-600', text: 'text-amber-700', border: 'border-amber-100', value: 'text-amber-700' },
-    slate: { bg: 'bg-slate-100 text-slate-500', text: 'text-slate-500', border: 'border-slate-200', value: 'text-slate-500' },
+  const colors: Record<string, { bg: string; border: string; value: string }> = {
+    emerald: { bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100', value: 'text-emerald-700' },
+    blue: { bg: 'bg-blue-50 text-blue-600', border: 'border-blue-100', value: 'text-blue-700' },
+    rose: { bg: 'bg-rose-50 text-rose-600', border: 'border-rose-100', value: 'text-rose-700' },
+    teal: { bg: 'bg-teal-50 text-teal-600', border: 'border-teal-100', value: 'text-teal-700' },
+    amber: { bg: 'bg-amber-50 text-amber-600', border: 'border-amber-100', value: 'text-amber-700' },
+    slate: { bg: 'bg-slate-100 text-slate-500', border: 'border-slate-200', value: 'text-slate-500' },
   };
   const c = colors[color];
   return (
