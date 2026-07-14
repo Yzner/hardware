@@ -41,7 +41,6 @@ import {
   ShoppingCart,
   Send,
   BookOpen,
-  Banknote,
 } from 'lucide-react';
 
 type AppView = 'role-select' | 'login' | 'dashboard';
