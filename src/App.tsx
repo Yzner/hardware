@@ -24,6 +24,7 @@ import Reports from './components/admin/Reports';
 import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
 import SendItem from './components/branch/SendItem';
 import CollectionSummary from './components/admin/CollectionSummary';
+import Finances from './components/admin/Finances';
 
 import {
   LayoutDashboard,
@@ -40,6 +41,7 @@ import {
   ShoppingCart,
   Send,
   BookOpen,
+  Banknote,
 } from 'lucide-react';
 
 type AppView = 'role-select' | 'login' | 'dashboard';
@@ -56,6 +58,7 @@ type AdminTab =
 'Debts' |
 'Payroll' | 
 'Reports' |
+'finances' | 
 'Employees';
 type BranchTab =
   | 'pos'
@@ -163,6 +166,9 @@ function AppContent() {
           label: 'Notifications',
           icon: <Bell className="w-4 h-4" />,
         },
+        { key: 'finances', 
+          label: 'Finances', 
+          icon: <Banknote className="w-4 h-4" /> },
       ];
 
       const renderAdminContent = () => {
@@ -197,6 +203,8 @@ function AppContent() {
             return <IncomeReports />;
           case 'collection-summary':
             return <CollectionSummary />;
+          case 'finances':
+            return <Finances />;
           case 'Notifications':
             return <Notifications />;
           case 'Attendance':
