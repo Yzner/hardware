@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Calendar, DollarSign, TrendingUp, TrendingDown, CreditCard,
-  Wallet, Search, Download, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp, BookOpen
+  Wallet, Search, Download, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 interface BranchRow {
