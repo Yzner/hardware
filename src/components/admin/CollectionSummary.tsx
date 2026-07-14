@@ -153,7 +153,7 @@ export default function CollectionSummary() {
     salesData.forEach(s => {
       saleLookup[s.id] = {
         branch_id: s.branch_id,
-        branch_name: (s.branch as { branch_name: string } | null)?.branch_name || 'Unknown',
+        branch_name: (s.branch as unknown as { branch_name: string } | null)?.branch_name || 'Unknown',
         created_at: s.created_at,
         total: Number(s.total),
       };
@@ -194,7 +194,7 @@ export default function CollectionSummary() {
       // Fallback: no line items, use sale totals
       salesData.forEach(s => {
         const bid = s.branch_id;
-        const bname = (s.branch as { branch_name: string } | null)?.branch_name || 'Unknown';
+        const bname = (s.branch as unknown as { branch_name: string } | null)?.branch_name || 'Unknown';
         if (!branchSales[bid]) branchSales[bid] = { branch_name: bname, sales: 0, cost: 0 };
         branchSales[bid].sales += Number(s.total);
       });
