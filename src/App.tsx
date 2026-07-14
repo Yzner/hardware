@@ -23,6 +23,7 @@ import Payroll from './components/admin/Payroll';
 import Reports from './components/admin/Reports';
 import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
 import SendItem from './components/branch/SendItem';
+import CollectionSummary from './components/admin/CollectionSummary';
 
 import {
   LayoutDashboard,
@@ -38,6 +39,7 @@ import {
   Briefcase,
   ShoppingCart,
   Send,
+  BookOpen,
 } from 'lucide-react';
 
 type AppView = 'role-select' | 'login' | 'dashboard';
@@ -48,6 +50,7 @@ type AdminTab =
 'stock-requests' | 
 'activity-logs' | 
 'income' | 
+'collection-summary' |
 'Notifications' | 
 'Attendance' | 
 'Debts' |
@@ -151,6 +154,10 @@ function AppContent() {
           label: 'Income Reports',
           icon: <TrendingUp className="w-4 h-4" />,
         },
+        { 
+          key: 'collection-summary', 
+          label: 'Collection Summary', 
+          icon: <BookOpen className="w-4 h-4" /> },
         {
           key: 'Notifications',
           label: 'Notifications',
@@ -188,6 +195,8 @@ function AppContent() {
             return <ActivityLogs />;
           case 'income':
             return <IncomeReports />;
+          case 'collection-summary':
+            return <CollectionSummary />;
           case 'Notifications':
             return <Notifications />;
           case 'Attendance':

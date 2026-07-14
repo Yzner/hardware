@@ -9,7 +9,7 @@ interface SaleRow {
   created_at: string;
   payment_status?: string;
   branch: { branch_name: string } | null;
-  sale_items: { unit_cost_price: number; unit_price: number; quantity: number }[];
+  sale_items: { unit_cost_price: number; unit_price: number; quantity: number; products: { cost_price: number } | null }[];
 }
 
 interface BranchReport {
@@ -93,7 +93,7 @@ export default function IncomeReports() {
 
       const { data } = await supabase
         .from('sales')
-        .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity)')
+        .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity, products(cost_price))')
         .order('created_at', { ascending: false });
 
       if (data) {
@@ -113,7 +113,10 @@ export default function IncomeReports() {
           let saleRevenue = 0;
           if (sale.sale_items && sale.sale_items.length > 0) {
             sale.sale_items.forEach(item => {
-              saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+              const costPrice = Number(item.unit_cost_price) > 0
+                ? Number(item.unit_cost_price)
+                : Number(item.products?.cost_price || 0);
+              saleCost += costPrice * item.quantity;
               saleRevenue += Number(item.unit_price) * item.quantity;
             });
           } else {
@@ -176,7 +179,7 @@ export default function IncomeReports() {
 
     let query = supabase
       .from('sales')
-      .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity)')
+      .select('*, branch:profiles!sales_branch_id_fkey(branch_name), sale_items(unit_cost_price, unit_price, quantity, products(cost_price))')
       .gte('created_at', start.toISOString())
       .order('created_at', { ascending: false });
 
@@ -204,7 +207,10 @@ export default function IncomeReports() {
         let saleRevenue = 0;
         if (sale.sale_items && sale.sale_items.length > 0) {
           sale.sale_items.forEach(item => {
-            saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+            const costPrice = Number(item.unit_cost_price) > 0
+              ? Number(item.unit_cost_price)
+              : Number(item.products?.cost_price || 0);
+            saleCost += costPrice * item.quantity;
             saleRevenue += Number(item.unit_price) * item.quantity;
           });
         } else {
@@ -599,7 +605,10 @@ export default function IncomeReports() {
                     let saleRevenue = 0;
                     if (tx.sale_items && tx.sale_items.length > 0) {
                       tx.sale_items.forEach(item => {
-                        saleCost += Number(item.unit_cost_price || 0) * item.quantity;
+                        const costPrice = Number(item.unit_cost_price) > 0
+                          ? Number(item.unit_cost_price)
+                          : Number(item.products?.cost_price || 0);
+                        saleCost += costPrice * item.quantity;
                         saleRevenue += Number(item.unit_price) * item.quantity;
                       });
                     } else {

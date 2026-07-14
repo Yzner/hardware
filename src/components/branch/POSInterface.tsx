@@ -7,7 +7,6 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  cost_price: number;
   unit: string;
   branch_stock: { stock: number }[];
 }
@@ -35,21 +34,16 @@ export default function POSInterface() {
   }, [profile?.id]);
 
   const loadProducts = async () => {
-      if (!profile?.id) return;
+    if (!profile?.id) return;
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price, unit, cost_price, branch_stock(stock)')
-        .eq('branch_stock.branch_id', profile.id)
-        .order('name');
-
-      if (error) {
-        console.error('Failed to load products:', error);
-      }
-
-      setProducts(data || []);
-      setLoading(false);
-    };
+    const { data } = await supabase
+      .from('products')
+      .select('*, branch_stock(stock)')
+      .eq('branch_stock.branch_id', profile.id)
+      .order('name');
+    setProducts(data || []);
+    setLoading(false);
+  };
 
   const addToCart = (product: Product) => {
     const existing = cart.find((c) => c.product.id === product.id);
