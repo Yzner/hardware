@@ -186,6 +186,12 @@ export default function ProductManager() {
                     <option value="box">box</option>
                     <option value="pack">pack</option>
                     <option value="bottle">bottle</option>
+                    <option value="cubic">cubic</option>
+                    <option value="meter">meter</option>
+                    <option value="feet">feet</option>
+                    <option value="cm">cm</option>
+                    <option value="inch">inch</option>
+                    <option value="mm">mm</option>
                   </select>
                 </div>
               </div>
