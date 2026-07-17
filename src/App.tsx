@@ -12,6 +12,7 @@ import IncomeReports from './components/admin/IncomeReports';
 import Notifications from './components/admin/Notifications';
 import AllBranches from './components/admin/AllBranches';
 import BranchActivityDetail from './components/admin/BranchActivityDetail';
+import BranchProductsDetail from './components/admin/BranchProductsDetail';
 import POSInterface from './components/branch/POSInterface';
 import StockRequest from './components/branch/StockRequest';
 import SalesHistory from './components/branch/SalesHistory';
@@ -86,6 +87,7 @@ function AppContent() {
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [branchTab, setBranchTab] = useState<BranchTab>('pos');
   const [viewingBranch, setViewingBranch] = useState<Profile | null>(null);
+  const [branchViewMode, setBranchViewMode] = useState<'activity' | 'products'>('activity');
   if (window.location.pathname === '/attendance/check-in') {
     return <AttendanceCheckIn />;
   }
@@ -188,9 +190,16 @@ function AppContent() {
             );
           case 'all-branches':
             return viewingBranch ? (
-              <BranchActivityDetail branch={viewingBranch} onBack={() => setViewingBranch(null)} />
+              branchViewMode === 'products' ? (
+                <BranchProductsDetail branch={viewingBranch} onBack={() => setViewingBranch(null)} />
+              ) : (
+                <BranchActivityDetail branch={viewingBranch} onBack={() => setViewingBranch(null)} />
+              )
             ) : (
-              <AllBranches onViewActivity={(b) => setViewingBranch(b)} />
+              <AllBranches
+                onViewActivity={(b) => { setViewingBranch(b); setBranchViewMode('activity'); }}
+                onViewProducts={(b) => { setViewingBranch(b); setBranchViewMode('products'); }}
+              />
             );
           case 'products':
             return <ProductManager />;

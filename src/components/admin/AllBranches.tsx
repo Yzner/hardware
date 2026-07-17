@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { MapPin, Eye, Search } from 'lucide-react';
+import { MapPin, Eye, Search, Boxes } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -17,7 +17,7 @@ interface BranchStats {
   productCount: number;
 }
 
-export default function AllBranches({ onViewActivity }: { onViewActivity: (branch: Profile) => void }) {
+export default function AllBranches({ onViewActivity, onViewProducts }: { onViewActivity: (branch: Profile) => void; onViewProducts: (branch: Profile) => void }) {
   const [branches, setBranches] = useState<Profile[]>([]);
   const [stats, setStats] = useState<Record<string, BranchStats>>({});
   const [loading, setLoading] = useState(true);
@@ -120,13 +120,22 @@ export default function AllBranches({ onViewActivity }: { onViewActivity: (branc
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onViewActivity(branch)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                >
-                  <Eye className="w-4 h-4" />
-                  Show Activity
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => onViewActivity(branch)}
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Show Activity
+                  </button>
+                  <button
+                    onClick={() => onViewProducts(branch)}
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <Boxes className="w-4 h-4" />
+                    Show All Products
+                  </button>
+                </div>
               </div>
             );
           })}
