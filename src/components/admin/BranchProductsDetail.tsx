@@ -320,9 +320,7 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
-                const margin = r.price - r.cost_price;
-                return (
+              {filtered.map((r) => (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                     <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
                       <div className="flex items-center gap-2">
@@ -349,8 +347,7 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
                     <td className="px-5 py-3.5 text-sm font-semibold text-amber-600 text-right">${fmt(r.total_value)}</td>
                     <td className="px-5 py-3.5 text-sm font-semibold text-emerald-600 text-right">${fmt((r.price - r.cost_price) * r.stock)}</td>
                   </tr>
-                );
-              })}
+              ))}
               {filtered.length === 0 && (
                 <tr><td colSpan={9} className="px-5 py-8 text-center text-slate-400">
                   {rows.length === 0 ? 'No products have been assigned to this branch yet.' : 'No products match your search.'}
