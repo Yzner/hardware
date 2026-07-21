@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   ArrowLeft, Package, DollarSign, TrendingUp, Boxes,
-  AlertCircle, Search, ChevronDown, ChevronUp, PackageCheck, ShoppingCart, Wallet
+  AlertCircle, Search, ChevronDown, ChevronUp, PackageCheck, ShoppingCart, TrendingDown, Wallet, FileDown
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Profile {
   id: string;
@@ -162,6 +164,89 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
   const totalUnits = rows.reduce((s, r) => s + r.stock, 0);
   const productCount = rows.length;
 
+  const downloadPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const now = new Date();
+    const dateStr = now.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' });
+
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${branch.branch_name} — Products Report`, 40, 40);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Location: ${branch.location || 'N/A'}    User: @${branch.username}`, 40, 58);
+    doc.text(`Generated: ${dateStr}`, 40, 72);
+    doc.text('All-time totals (received from start, sold from start)', 40, 86);
+
+    // Summary box
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    const summaryY = 108;
+    doc.text(
+      `Total Received: ${totalReceived.toLocaleString()}    Total Sold: ${totalSold.toLocaleString()}    Current Units: ${totalUnits.toLocaleString()}`,
+      40, summaryY
+    );
+    doc.text(
+      `Total Inventory Cost: ${fmt(totalCost)}    Potential Profit: ${fmt(potentialProfit)}    Stock Value: ${fmt(totalValue)}`,
+      40, summaryY + 16
+    );
+
+    // Table
+    autoTable(doc, {
+      startY: summaryY + 32,
+      head: [['Product', 'Cost Price', 'Selling Price', 'Total Received', 'Total Sold', 'Current Stock', 'Unit', 'Stock Value', 'Potential Profit']],
+      body: filtered.map((r) => [
+        r.name,
+        `${fmt(r.cost_price)}`,
+        `${fmt(r.price)}`,
+        r.total_received.toLocaleString(),
+        r.total_sold.toLocaleString(),
+        r.stock.toLocaleString(),
+        r.unit,
+        `${fmt(r.total_value)}`,
+        `${fmt((r.price - r.cost_price) * r.stock)}`,
+      ]),
+      foot: [[
+        `TOTALS (${filtered.length})`, '', '',
+        filtered.reduce((s, r) => s + r.total_received, 0).toLocaleString(),
+        filtered.reduce((s, r) => s + r.total_sold, 0).toLocaleString(),
+        filtered.reduce((s, r) => s + r.stock, 0).toLocaleString(),
+        '',
+        `${fmt(filtered.reduce((s, r) => s + r.total_value, 0))}`,
+        `${fmt(filtered.reduce((s, r) => s + (r.price - r.cost_price) * r.stock, 0))}`,
+      ]],
+      theme: 'striped',
+      headStyles: { fillColor: [5, 150, 105], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 140 },
+        1: { halign: 'right' }, 2: { halign: 'right' },
+        3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' },
+        7: { halign: 'right' }, 8: { halign: 'right' },
+      },
+      margin: { left: 40, right: 40 },
+    });
+
+    // Footer page numbers
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `Page ${i} of ${pageCount}  —  ${branch.branch_name} Products Report`,
+        40, doc.internal.pageSize.getHeight() - 20
+      );
+    }
+
+    const safeName = (branch.branch_name || branch.username).replace(/[^a-z0-9]/gi, '_');
+    doc.save(`${safeName}_products_report.pdf`);
+  };
+
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortAsc((a) => !a);
     else { setSortField(field); setSortAsc(true); }
@@ -274,16 +359,26 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-          placeholder="Search products..."
-        />
+      {/* Search + Download */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            placeholder="Search products..."
+          />
+        </div>
+        <button
+          onClick={downloadPDF}
+          disabled={rows.length === 0}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors whitespace-nowrap"
+        >
+          <FileDown className="w-4 h-4" />
+          Download PDF
+        </button>
       </div>
 
       {/* Products Table */}
@@ -320,7 +415,9 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {filtered.map((r) => {
+                const margin = r.price - r.cost_price;
+                return (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                     <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
                       <div className="flex items-center gap-2">
@@ -347,7 +444,8 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
                     <td className="px-5 py-3.5 text-sm font-semibold text-amber-600 text-right">${fmt(r.total_value)}</td>
                     <td className="px-5 py-3.5 text-sm font-semibold text-emerald-600 text-right">${fmt((r.price - r.cost_price) * r.stock)}</td>
                   </tr>
-              ))}
+                );
+              })}
               {filtered.length === 0 && (
                 <tr><td colSpan={9} className="px-5 py-8 text-center text-slate-400">
                   {rows.length === 0 ? 'No products have been assigned to this branch yet.' : 'No products match your search.'}
