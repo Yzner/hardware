@@ -26,6 +26,7 @@ import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
 import SendItem from './components/branch/SendItem';
 import CollectionSummary from './components/admin/CollectionSummary';
 import Finances from './components/admin/Finances';
+import Storefront from './components/public/Storefront';
 
 import {
   LayoutDashboard,
@@ -44,7 +45,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 
-type AppView = 'role-select' | 'login' | 'dashboard';
+type AppView = 'role-select' | 'login' | 'dashboard' | 'storefront'
 type AdminTab = 
 'dashboard' | 
 'all-branches' | 
@@ -275,9 +276,13 @@ function AppContent() {
   if (view === 'login') {
     return <Login role={loginRole} onBack={() => setView('role-select')} />;
   }
+  if (view === 'storefront') {
+      return <Storefront onAdminLogin={() => setView('role-select')} />;
+    }
 
-  return <RoleSelection onSelectRole={(role) => { setLoginRole(role); setView('login'); }} />;
-}
+    return <RoleSelection onSelectRole={(role) => { setLoginRole(role); setView('login'); }} 
+    onViewStorefront={() => setView('storefront')} />;
+  }
 
 export default function App() {
   return (

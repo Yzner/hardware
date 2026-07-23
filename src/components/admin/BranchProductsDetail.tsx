@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   ArrowLeft, Package, DollarSign, TrendingUp, Boxes,
-  AlertCircle, Search, ChevronDown, ChevronUp, PackageCheck, ShoppingCart, TrendingDown, Wallet, FileDown
+  AlertCircle, Search, ChevronDown, ChevronUp, PackageCheck, ShoppingCart, Wallet, FileDown
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';

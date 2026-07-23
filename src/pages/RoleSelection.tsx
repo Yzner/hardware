@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Shield, Store } from 'lucide-react';
+import { Shield, Store, Globe } from 'lucide-react';
 
 interface RoleSelectionProps {
   onSelectRole: (role: 'admin' | 'branch') => void;
+  onViewStorefront: () => void;
 }
 
-export default function RoleSelection({ onSelectRole }: RoleSelectionProps) {
+export default function RoleSelection({ onSelectRole, onViewStorefront }: RoleSelectionProps) {
   const [hoveredRole, setHoveredRole] = useState<string | null>(null);
 
   return (
@@ -15,8 +16,19 @@ export default function RoleSelection({ onSelectRole }: RoleSelectionProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/20 rounded-2xl mb-6">
             <Store className="w-8 h-8 text-emerald-400" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">RS Hardware and Trading</h1>
+          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">POS System</h1>
           <p className="text-slate-400 text-lg">Select your role to continue</p>
+        </div>
+
+        <div className="text-center mb-8">
+          <button
+            onClick={onViewStorefront}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-medium border border-white/20 transition-all hover:-translate-y-0.5"
+          >
+            <Globe className="w-4 h-4 text-amber-400" />
+            Visit Public Storefront
+          </button>
+          <p className="text-slate-500 text-xs mt-2">Browse products and prices without logging in</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
