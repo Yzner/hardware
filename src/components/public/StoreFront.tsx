@@ -40,7 +40,7 @@ function productImage(name: string): string {
   return 'https://images.pexels.com/photos/8961342/pexels-photo-8961342.jpeg?auto=compress&cs=tinysrgb&w=600';
 }
 
-export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void }) {
+export default function Storefront() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
