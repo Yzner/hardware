@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Search, ShoppingCart, MapPin, Phone, Mail, Clock, Package,
-  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer,
-  CheckCircle, AlertCircle, Menu
+  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer, Home as HomeIcon,
+  CheckCircle, AlertCircle, ArrowLeft, Menu
 } from 'lucide-react';
 
 interface Product {
@@ -40,7 +40,7 @@ function productImage(name: string): string {
   return 'https://images.pexels.com/photos/8961342/pexels-photo-8961342.jpeg?auto=compress&cs=tinysrgb&w=600';
 }
 
-export default function Storefront() {
+export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function Storefront() {
     try {
       const { data, error: err } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, price, stock, unit, image_url, description, is_promo, promo_price, is_public')
         .order('name');
       if (err) throw err;
       setProducts((data || []).filter((p: Product) => p.is_public !== false));
@@ -78,6 +78,7 @@ export default function Storefront() {
   );
 
   const promoProducts = products.filter((p) => p.is_promo && p.promo_price);
+  const inStock = products.filter((p) => p.stock > 0);
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +125,7 @@ export default function Storefront() {
               <button onClick={() => scrollToSection('products')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Products</button>
               <button onClick={() => scrollToSection('promos')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Promotions</button>
               <button onClick={() => scrollToSection('contact')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Contact</button>
+              <button onClick={onAdminLogin} className="ml-2 px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">Staff Login</button>
             </nav>
 
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-600">
@@ -137,6 +139,7 @@ export default function Storefront() {
               <button onClick={() => scrollToSection('products')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Products</button>
               <button onClick={() => scrollToSection('promos')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Promotions</button>
               <button onClick={() => scrollToSection('contact')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Contact</button>
+              <button onClick={onAdminLogin} className="px-4 py-2.5 text-sm font-medium text-white bg-slate-800 rounded-lg text-center mt-1">Staff Login</button>
             </nav>
           )}
         </div>
@@ -168,6 +171,7 @@ export default function Storefront() {
           </div>
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-slate-400 text-sm">
             <span className="flex items-center gap-1.5"><Package className="w-4 h-4 text-amber-400" /> {products.length} Products</span>
+            <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-400" /> {inStock.length} In Stock</span>
             <span className="flex items-center gap-1.5"><TrendingDown className="w-4 h-4 text-rose-400" /> {promoProducts.length} On Promo</span>
           </div>
         </div>
@@ -227,7 +231,7 @@ export default function Storefront() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Our Products</h2>
-                <p className="text-slate-500 text-sm">Browse our catalog</p>
+                <p className="text-slate-500 text-sm">{filtered.length} items available</p>
               </div>
             </div>
             <div className="relative sm:max-w-xs w-full">
@@ -252,12 +256,20 @@ export default function Storefront() {
               {filtered.map((p) => {
                 const isPromo = p.is_promo && p.promo_price;
                 const displayPrice = isPromo ? Number(p.promo_price) : Number(p.price);
+                const outOfStock = p.stock <= 0;
                 return (
                   <div key={p.id} className="group bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col">
                     <div className="relative h-48 overflow-hidden bg-slate-100 cursor-pointer" onClick={() => setSelectedProduct(p)}>
                       <img src={p.image_url || productImage(p.name)} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       {isPromo && (
                         <span className="absolute top-3 left-3 px-2.5 py-1 bg-rose-500 text-white text-xs font-bold rounded-lg shadow-md">PROMO</span>
+                      )}
+                      {outOfStock ? (
+                        <span className="absolute top-3 right-3 px-2.5 py-1 bg-slate-600 text-white text-xs font-bold rounded-lg shadow-md">Out of Stock</span>
+                      ) : p.stock <= 10 ? (
+                        <span className="absolute top-3 right-3 px-2.5 py-1 bg-amber-500 text-white text-xs font-bold rounded-lg shadow-md">Low Stock</span>
+                      ) : (
+                        <span className="absolute top-3 right-3 px-2.5 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md">In Stock</span>
                       )}
                     </div>
                     <div className="p-4 flex flex-col flex-1">
@@ -268,6 +280,7 @@ export default function Storefront() {
                         <span className={`text-xl font-bold ${isPromo ? 'text-rose-600' : 'text-slate-900'}`}>${fmt(displayPrice)}</span>
                         <span className="text-xs text-slate-500">/{p.unit}</span>
                       </div>
+                      <p className="text-xs text-slate-400 mt-1.5">{p.stock > 0 ? `${p.stock} ${p.unit} available` : 'Currently unavailable'}</p>
                     </div>
                   </div>
                 );
@@ -386,6 +399,9 @@ export default function Storefront() {
             <span className="text-white font-bold">BuildRight Hardware</span>
           </div>
           <p className="text-slate-400 text-sm mb-4">Quality tools and materials for every build.</p>
+          <button onClick={onAdminLogin} className="text-slate-500 hover:text-amber-400 text-xs transition-colors">
+            Staff Login
+          </button>
           <p className="text-slate-600 text-xs mt-4">&copy; 2026 BuildRight Hardware. All rights reserved.</p>
         </div>
       </footer>
@@ -414,6 +430,17 @@ export default function Storefront() {
                   ${fmt(selectedProduct.is_promo && selectedProduct.promo_price ? Number(selectedProduct.promo_price) : Number(selectedProduct.price))}
                 </span>
                 <span className="text-slate-500">/{selectedProduct.unit}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-4">
+                {selectedProduct.stock > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium">
+                    <CheckCircle className="w-4 h-4" /> In Stock — {selectedProduct.stock} {selectedProduct.unit} available
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-sm font-medium">
+                    <AlertCircle className="w-4 h-4" /> Out of Stock
+                  </span>
+                )}
               </div>
               <button onClick={() => scrollToSection('contact')} className="w-full inline-flex items-center justify-center gap-2 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold transition-colors">
                 <ShoppingCart className="w-4 h-4" />
