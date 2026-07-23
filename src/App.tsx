@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import RoleSelection from './pages/RoleSelection';
 import Login from './pages/Login';
@@ -27,7 +27,7 @@ import SendItem from './components/branch/SendItem';
 import CollectionSummary from './components/admin/CollectionSummary';
 import Finances from './components/admin/Finances';
 import Storefront from './components/public/StoreFront';
-import { useState } from 'react';
+
 import {
   LayoutDashboard,
   Users,
@@ -84,18 +84,20 @@ function AppContent() {
     return 'storefront';
   });
 
-  useEffect(() => {
-    const onHashChange = () => {
-      const hash = window.location.hash.replace('#/', '').replace('#', '');
-      if (hash === 'login') {
-        if (!currentUser) setView('role-select');
-      } else {
-        setView('storefront');
-      }
-    };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [currentUser]);
+useEffect(() => {
+  const onHashChange = () => {
+    const hash = window.location.hash.replace('#/', '').replace('#', '');
+
+    if (hash === 'login') {
+      if (!user) setView('role-select');
+    } else {
+      setView('storefront');
+    }
+  };
+
+  window.addEventListener('hashchange', onHashChange);
+  return () => window.removeEventListener('hashchange', onHashChange);
+}, [user]);
 
   const navigateTo = (target: AppView) => {
     if (target === 'storefront') {
