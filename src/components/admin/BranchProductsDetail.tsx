@@ -416,7 +416,6 @@ export default function BranchProductsDetail({ branch, onBack }: { branch: Profi
             </thead>
             <tbody>
               {filtered.map((r) => {
-                const margin = r.price - r.cost_price;
                 return (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                     <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
