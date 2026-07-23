@@ -26,7 +26,7 @@ import AttendanceCheckIn from './components/admin/AttendanceCheckIn';
 import SendItem from './components/branch/SendItem';
 import CollectionSummary from './components/admin/CollectionSummary';
 import Finances from './components/admin/Finances';
-import Storefront from './components/public/Storefront';
+import Storefront from './components/public/StoreFront';
 
 import {
   LayoutDashboard,
