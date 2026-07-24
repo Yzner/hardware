@@ -109,8 +109,7 @@ function PortalLogin() {
 /*  /  ->  public storefront                                           */
 /* ------------------------------------------------------------------ */
 function PublicStorefront() {
-  const navigate = useNavigate();
-  return <Storefront onAdminLogin={() => navigate('/portal/admin')} />;
+  return <Storefront />;
 }
 
 /* ------------------------------------------------------------------ */
