@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Search, ShoppingCart, MapPin, Phone, Mail, Clock, Package,
-  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer, Home ,
+  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer,
   CheckCircle, AlertCircle, Menu
 } from 'lucide-react';
 
