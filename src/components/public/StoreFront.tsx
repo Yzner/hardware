@@ -23,16 +23,16 @@ const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2,
 
 function productImage(name: string): string {
   const categories: { keywords: string[]; url: string }[] = [
-    { keywords: ['hammer', 'nail', 'screw', 'bolt', 'tool'], url: 'https://images.pexels.com/photos/162539/architecture-building-amsterdam-blue-sky-162539.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['paint', 'brush', 'roller', 'color'], url: 'https://images.pexels.com/photos/2098085/pexels-photo-2098085.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['pipe', 'pvc', 'tube', 'plumb'], url: 'https://images.pexels.com/photos/834892/pexels-photo-834892.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['wood', 'lumber', 'plywood', 'timber'], url: 'https://images.pexels.com/photos/2599151/pexels-photo-2599151.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['cement', 'concrete', 'sand', 'gravel'], url: 'https://images.pexels.com/photos/1078884/pexels-photo-1078884.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['wire', 'cable', 'electrical', 'switch', 'outlet'], url: 'https://images.pexels.com/photos/34577/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['door', 'window', 'lock', 'hinge'], url: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['roof', 'tile', 'shingle'], url: 'https://images.pexels.com/photos/3236179/pexels-photo-3236179.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['hose', 'fence', 'rake'], url: 'https://images.pexels.com/photos/1453499/pexels-photo-1453499.jpeg?auto=compress&cs=tinysrgb&w=600' },
     { keywords: ['amakan roll'], url: 'https://i.postimg.cc/N0tcwgSq/660461418-978671784673026-6793742864443919472-n.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['barb'], url: 'https://i.postimg.cc/P5HjgWPK/1000399636.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['brush'], url: 'https://i.postimg.cc/qvrTPsz1/1000399668.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['plywood', 'shira'], url: 'https://i.postimg.cc/yNYzd7ht/1000399676.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['sawale'], url: 'https://i.postimg.cc/1t8hGMjV/1000399680.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['pvc'], url: 'https://i.postimg.cc/Dzj34RBw/1000399681.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['black host'], url: 'https://i.postimg.cc/qRNVsQ5r/1000399678.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['diamond'], url: 'https://i.postimg.cc/258f6CdW/1000399669.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['nail'], url: 'https://i.postimg.cc/HLsCxT09/1000399673.jpg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['tirewire'], url: 'https://i.postimg.cc/6Q5N3BVv/1000399674.jpg?auto=compress&cs=tinysrgb&w=600' },
   ];
   const lower = name.toLowerCase();
   for (const cat of categories) {
