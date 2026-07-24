@@ -31,13 +31,14 @@ function productImage(name: string): string {
     { keywords: ['wire', 'cable', 'electrical', 'switch', 'outlet'], url: 'https://images.pexels.com/photos/34577/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600' },
     { keywords: ['door', 'window', 'lock', 'hinge'], url: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg?auto=compress&cs=tinysrgb&w=600' },
     { keywords: ['roof', 'tile', 'shingle'], url: 'https://images.pexels.com/photos/3236179/pexels-photo-3236179.jpeg?auto=compress&cs=tinysrgb&w=600' },
-    { keywords: ['garden', 'hose', 'fence', 'rake'], url: 'https://images.pexels.com/photos/1453499/pexels-photo-1453499.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['hose', 'fence', 'rake'], url: 'https://images.pexels.com/photos/1453499/pexels-photo-1453499.jpeg?auto=compress&cs=tinysrgb&w=600' },
+    { keywords: ['amakan roll'], url: 'https://i.postimg.cc/N0tcwgSq/660461418-978671784673026-6793742864443919472-n.jpg?auto=compress&cs=tinysrgb&w=600' },
   ];
   const lower = name.toLowerCase();
   for (const cat of categories) {
     if (cat.keywords.some((k) => lower.includes(k))) return cat.url;
   }
-  return 'https://images.pexels.com/photos/8961342/pexels-photo-8961342.jpeg?auto=compress&cs=tinysrgb&w=600';
+  return 'https://i.postimg.cc/BvbCbFd4/Untitled-design-(7).png?auto=compress&cs=tinysrgb&w=1000';
 }
 
 export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void }) {
@@ -99,7 +100,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -110,22 +111,26 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
-                <Wrench className="w-5 h-5 text-white" />
+            <div className="flex items-center justify-center gap-2.5 mb-2">
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white">
+                <img
+                  src="https://i.postimg.cc/SNkhx31h/Untitled-design-(5).png"
+                  alt="LUVICON Logo"
+                  className="w-full h-full object-cover"
+                />
               </div>
+
               <div>
-                <h1 className="text-lg font-bold text-slate-900 leading-tight">BuildRight</h1>
-                <p className="text-xs text-slate-500 leading-tight">Hardware &amp; Supplies</p>
+                <h1 className="text-lg font-bold text-slate-900 leading-tight">LUVICON Hardware</h1>
+                <p className="text-xs text-slate-500 leading-tight">Construction Supply &amp; Metal Works</p>
               </div>
             </div>
 
             <nav className="hidden md:flex items-center gap-1">
-              <button onClick={() => scrollToSection('home')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Home</button>
-              <button onClick={() => scrollToSection('products')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Products</button>
-              <button onClick={() => scrollToSection('promos')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Promotions</button>
-              <button onClick={() => scrollToSection('contact')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">Contact</button>
-              <button onClick={onAdminLogin} className="ml-2 px-4 py-2 text-sm font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">Staff Login</button>
+              <button onClick={() => scrollToSection('home')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-green-600 transition-colors">Home</button>
+              <button onClick={() => scrollToSection('products')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-green-600 transition-colors">Products</button>
+              <button onClick={() => scrollToSection('promos')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-green-600 transition-colors">Promotions</button>
+              <button onClick={() => scrollToSection('contact')} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-green-600 transition-colors">Contact</button>
             </nav>
 
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-600">
@@ -135,11 +140,10 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
 
           {mobileMenuOpen && (
             <nav className="md:hidden pb-4 flex flex-col gap-1">
-              <button onClick={() => scrollToSection('home')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Home</button>
-              <button onClick={() => scrollToSection('products')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Products</button>
-              <button onClick={() => scrollToSection('promos')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Promotions</button>
-              <button onClick={() => scrollToSection('contact')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-amber-600 text-left">Contact</button>
-              <button onClick={onAdminLogin} className="px-4 py-2.5 text-sm font-medium text-white bg-slate-800 rounded-lg text-center mt-1">Staff Login</button>
+              <button onClick={() => scrollToSection('home')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-green-600 text-left">Home</button>
+              <button onClick={() => scrollToSection('products')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-green-600 text-left">Products</button>
+              <button onClick={() => scrollToSection('promos')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-green-600 text-left">Promotions</button>
+              <button onClick={() => scrollToSection('contact')} className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-green-600 text-left">Contact</button>
             </nav>
           )}
         </div>
@@ -147,11 +151,11 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
 
       {/* Hero */}
       <section id="home" className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url(https://images.pexels.com/photos/3236179/pexels-photo-3236179.jpeg?auto=compress&cs=tinysrgb&w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url(https://i.postimg.cc/XJRzmGmS/750554152-4563164397339303-80841020702445777-n.jpg?auto=compress&cs=tinysrgb&w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div className="relative max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 rounded-full mb-6">
-            <Hammer className="w-4 h-4 text-amber-400" />
-            <span className="text-amber-300 text-sm font-medium">Your Trusted Hardware Partner</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/20 rounded-full mb-6">
+            <Hammer className="w-4 h-4 text-green-400" />
+            <span className="text-green-300 text-sm font-medium">Your Trusted Hardware Partner</span>
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight">
             Quality Tools &amp; Materials<br />for Every Project
@@ -160,7 +164,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
             Browse our full catalog of hardware, tools, and building supplies. Competitive prices, reliable stock, expert service.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => scrollToSection('products')} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-amber-500/20">
+            <button onClick={() => scrollToSection('products')} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-700 hover:bg-green-600 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-green-500/20">
               <Package className="w-5 h-5" />
               Browse Products
             </button>
@@ -170,7 +174,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
             </button>
           </div>
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-slate-400 text-sm">
-            <span className="flex items-center gap-1.5"><Package className="w-4 h-4 text-amber-400" /> {products.length} Products</span>
+            <span className="flex items-center gap-1.5"><Package className="w-4 h-4 text-green-400" /> {products.length} Products</span>
             <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-400" /> {inStock.length} In Stock</span>
             <span className="flex items-center gap-1.5"><TrendingDown className="w-4 h-4 text-rose-400" /> {promoProducts.length} On Promo</span>
           </div>
@@ -226,8 +230,8 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                <Package className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                <Package className="w-5 h-5 text-green-600" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Our Products</h2>
@@ -240,7 +244,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Search products..."
               />
             </div>
@@ -267,13 +271,13 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
                       {outOfStock ? (
                         <span className="absolute top-3 right-3 px-2.5 py-1 bg-slate-600 text-white text-xs font-bold rounded-lg shadow-md">Out of Stock</span>
                       ) : p.stock <= 10 ? (
-                        <span className="absolute top-3 right-3 px-2.5 py-1 bg-amber-500 text-white text-xs font-bold rounded-lg shadow-md">Low Stock</span>
+                        <span className="absolute top-3 right-3 px-2.5 py-1 bg-green-500 text-white text-xs font-bold rounded-lg shadow-md">Low Stock</span>
                       ) : (
                         <span className="absolute top-3 right-3 px-2.5 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md">In Stock</span>
                       )}
                     </div>
                     <div className="p-4 flex flex-col flex-1">
-                      <h3 className="font-semibold text-slate-900 mb-1 truncate cursor-pointer hover:text-amber-600" onClick={() => setSelectedProduct(p)}>{p.name}</h3>
+                      <h3 className="font-semibold text-slate-900 mb-1 truncate cursor-pointer hover:text-green-600" onClick={() => setSelectedProduct(p)}>{p.name}</h3>
                       {p.description && <p className="text-xs text-slate-500 mb-2 line-clamp-2">{p.description}</p>}
                       <div className="flex items-baseline gap-2 mt-auto">
                         {isPromo && <span className="text-sm text-slate-400 line-through">${fmt(Number(p.price))}</span>}
@@ -306,32 +310,32 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                <MapPin className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <MapPin className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-slate-900 text-sm">Visit Us</p>
-                  <p className="text-slate-500 text-sm">123 Hardware Street, Industrial District</p>
+                  <p className="text-slate-500 text-sm">National Highway, Purok Magsasaka, Santa Lourdes, PPC, Palawan</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                <Phone className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <Phone className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">Call Us</p>
-                  <p className="text-slate-500 text-sm">(555) 123-4567</p>
+                  <p className="font-semibold text-slate-900 text-sm">Call & Message Us</p>
+                  <p className="text-slate-500 text-sm">0910-495-2354</p>
+                  <p className="text-slate-500 text-sm">0994-845-6351</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                <Mail className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <Mail className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-slate-900 text-sm">Email Us</p>
-                  <p className="text-slate-500 text-sm">info@buildright-hardware.com</p>
+                  <p className="text-slate-500 text-sm">llorenz.10022002@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-xl">
-                <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <Clock className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-slate-900 text-sm">Business Hours</p>
-                  <p className="text-slate-500 text-sm">Mon-Sat: 7:00 AM - 7:00 PM</p>
-                  <p className="text-slate-500 text-sm">Sunday: 9:00 AM - 5:00 PM</p>
+                  <p className="text-slate-500 text-sm">Mon-Sun: 7:30 AM - 5:30 PM</p>
                 </div>
               </div>
             </div>
@@ -344,7 +348,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
                   required
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="John Doe"
                 />
               </div>
@@ -355,7 +359,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
                   required
                   value={contactForm.email}
                   onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="john@example.com"
                 />
               </div>
@@ -366,7 +370,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
                   rows={4}
                   value={contactForm.message}
                   onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                   placeholder="How can we help you?"
                 />
               </div>
@@ -379,7 +383,7 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
               <button
                 type="submit"
                 disabled={sendingContact}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-white rounded-xl font-semibold transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 py-3 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white rounded-xl font-semibold transition-colors"
               >
                 {sendingContact ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 {sendingContact ? 'Sending...' : 'Send Message'}
@@ -390,21 +394,31 @@ export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void 
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-white font-bold">BuildRight Hardware</span>
+    <footer className="bg-slate-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto text-center">
+        <div className="flex items-center justify-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-lg overflow-hidden bg-white">
+            <img
+              src="https://i.postimg.cc/SNkhx31h/Untitled-design-(5).png"
+              alt="LUVICON Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <p className="text-slate-400 text-sm mb-4">Quality tools and materials for every build.</p>
-          <button onClick={onAdminLogin} className="text-slate-500 hover:text-amber-400 text-xs transition-colors">
-            Staff Login
-          </button>
-          <p className="text-slate-600 text-xs mt-4">&copy; 2026 BuildRight Hardware. All rights reserved.</p>
+
+          <span className="text-white font-bold">
+            LUVICON Hardware Construction Supply
+          </span>
         </div>
-      </footer>
+
+        <p className="text-slate-400 text-sm mb-4">
+          Quality tools and materials for every build.
+        </p>
+
+        <p className="text-slate-600 text-xs mt-4">
+          &copy; 2026 LUVICON Hardware Construction Supply. All rights reserved.
+        </p>
+      </div>
+    </footer>
 
       {/* Product Detail Modal */}
       {selectedProduct && (
