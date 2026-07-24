@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import RoleSelection from './pages/RoleSelection';
 import Login from './pages/Login';
@@ -78,36 +78,10 @@ interface Profile {
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
-  const [view, setView] = useState<AppView>(() => {
-    const hash = window.location.hash.replace('#/', '').replace('#', '');
-    if (hash === 'login') return 'role-select';
-    return 'storefront';
-  });
 
-useEffect(() => {
-  const onHashChange = () => {
-    const hash = window.location.hash.replace('#/', '').replace('#', '');
-
-    if (hash === 'login') {
-      if (!user) setView('role-select');
-    } else {
-      setView('storefront');
-    }
-  };
-
-  window.addEventListener('hashchange', onHashChange);
-  return () => window.removeEventListener('hashchange', onHashChange);
-}, [user]);
-
-  const navigateTo = (target: AppView) => {
-    if (target === 'storefront') {
-      window.location.hash = '/';
-    } else if (target === 'role-select') {
-      window.location.hash = '/login';
-    } else {
-      setView(target);
-    }
-  };
+  if (window.location.pathname === '/attendance/check-in') {
+    return <AttendanceCheckIn />;
+  }
 
   const [view, setView] = useState<AppView>('role-select');
   const [loginRole, setLoginRole] = useState<'admin' | 'branch'>('admin');
