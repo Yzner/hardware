@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -265,7 +265,7 @@ function Dashboard() {
 /* ------------------------------------------------------------------ */
 /*  Route guards                                                       */
 /* ------------------------------------------------------------------ */
-function RequireAuth({ children }: { children: JSX.Element }) {
+function RequireAuth({ children }: { children: ReactElement }) {
   const { user, profile, loading } = useAuth();
   if (loading) {
     return (
@@ -280,7 +280,7 @@ function RequireAuth({ children }: { children: JSX.Element }) {
   return children;
 }
 
-function RedirectIfAuthed({ children }: { children: JSX.Element }) {
+function RedirectIfAuthed({ children }: { children: ReactElement }) {
   const { user, profile, loading } = useAuth();
   if (loading) {
     return (
