@@ -108,23 +108,9 @@ function PortalLogin() {
 /* ------------------------------------------------------------------ */
 /*  /  ->  public storefront                                           */
 /* ------------------------------------------------------------------ */
-<Route
-  path="/portal"
-  element={
-    <RedirectIfAuthed>
-      <PortalRoleSelect />
-    </RedirectIfAuthed>
-  }
-/>
-
-<Route
-  path="/portal/:role"
-  element={
-    <RedirectIfAuthed>
-      <PortalLogin />
-    </RedirectIfAuthed>
-  }
-/>
+function PublicStorefront() {
+  return <Storefront />;
+}
 
 /* ------------------------------------------------------------------ */
 /*  /dashboard  ->  authenticated admin or branch dashboard            */
