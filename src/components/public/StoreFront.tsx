@@ -41,7 +41,7 @@ function productImage(name: string): string {
   return 'https://i.postimg.cc/BvbCbFd4/Untitled-design-(7).png?auto=compress&cs=tinysrgb&w=1000';
 }
 
-export default function Storefront({ onAdminLogin }: { onAdminLogin: () => void }) {
+export default function Storefront() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
