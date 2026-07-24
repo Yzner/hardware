@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   Search, ShoppingCart, MapPin, Phone, Mail, Clock, Package,
-  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer, Home as HomeIcon,
-  CheckCircle, AlertCircle, ArrowLeft, Menu
+  Tag, TrendingDown, X, Send, Loader2, Wrench, Hammer, Home ,
+  CheckCircle, AlertCircle, Menu
 } from 'lucide-react';
 
 interface Product {

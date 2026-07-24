@@ -277,8 +277,15 @@ function AppContent() {
     return <Login role={loginRole} onBack={() => setView('role-select')} />;
   }
   if (view === 'storefront') {
-      return <Storefront />;
-    }
+  return (
+    <Storefront
+      onAdminLogin={() => {
+        setLoginRole('admin');
+        setView('login');
+      }}
+    />
+  );
+}
 
     return <RoleSelection onSelectRole={(role) => { setLoginRole(role); setView('login'); }} 
     onViewStorefront={() => setView('storefront')} />;
